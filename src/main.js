@@ -1,10 +1,24 @@
+import { Track, WORLD_WIDTH, WORLD_HEIGHT } from './track.js';
+import { renderScenery } from './scenery.js';
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+
+const track = new Track();
+const scenery = renderScenery(track);
+
+// how the world maps onto the screen, worked out on resize
+const view = { scale: 1, offsetX: 0, offsetY: 0 };
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
+
+  // fit the whole world on screen and centre it
+  view.scale = Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+  view.offsetX = (canvas.width - WORLD_WIDTH * view.scale) / 2;
+  view.offsetY = (canvas.height - WORLD_HEIGHT * view.scale) / 2;
 }
 
 window.addEventListener('resize', resize);
@@ -25,8 +39,12 @@ function frame(now) {
 function update(dt) {}
 
 function draw() {
-  ctx.fillStyle = '#5a9a3c';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#7cb342';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
+  ctx.drawImage(scenery, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }
 
 requestAnimationFrame(frame);
