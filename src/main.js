@@ -2,6 +2,8 @@ import { Track, WORLD_WIDTH, WORLD_HEIGHT } from './track.js';
 import { renderScenery } from './scenery.js';
 import { Car } from './car.js';
 import { readKeyboard } from './input.js';
+import { LapTimer } from './laps.js';
+import { drawHud } from './hud.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -15,6 +17,7 @@ const car = new Car(
   start.y - start.dirY * 30,
   Math.atan2(start.dirY, start.dirX),
 );
+const timer = new LapTimer(track);
 
 // how the world maps onto the screen, worked out on resize
 const view = { scale: 1, offsetX: 0, offsetY: 0 };
@@ -47,6 +50,7 @@ function frame(now) {
 
 function update(dt) {
   car.update(readKeyboard(), track, dt);
+  timer.update(car, dt);
 }
 
 function draw() {
@@ -57,6 +61,8 @@ function draw() {
   ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
   ctx.drawImage(scenery, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   car.draw(ctx);
+
+  drawHud(ctx, timer, car, window.devicePixelRatio || 1);
 }
 
 requestAnimationFrame(frame);
