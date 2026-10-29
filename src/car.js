@@ -5,14 +5,14 @@ const ENGINE = 300;        // acceleration at a standstill
 const TOP_SPEED = 420;
 const BRAKE = 600;        // more than the tyres can take, so slamming them on locks the wheels
 const REVERSE = 90;
-const GRIP = 430;          // most acceleration the tyres can give in any direction
+const GRIP = 500;          // most acceleration the tyres can give in any direction
 const ROLLING_DRAG = 0.15;
 const SLIDING_GRIP = 0.7;  // a skidding tyre grips worse than a rolling one
 const ABS_LIMIT = 0.95;    // ABS keeps braking just under the point where the wheels lock
 const BRAKE_BIAS = 0.6;    // share of braking done by the front tyres
 const WEIGHT_TRANSFER = 0.15;
-const OVERSTEER = 1.2;
-const MAX_OVERSTEER = 1.5; // rad/s, so a slide stays catchable
+const OVERSTEER = 0.6;
+const MAX_OVERSTEER = 0.8; // rad/s, so a slide stays catchable
 const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
 const STEER_SPEED = 5;     // how quickly the wheel turns from centre to full lock, per second
@@ -20,7 +20,7 @@ const STEER_SPEED = 5;     // how quickly the wheel turns from centre to full lo
 // grass has much less grip and slows you down
 const SURFACE = {
   road: { grip: 1, drag: 0 },
-  grass: { grip: 0.45, drag: 1.6 },
+  grass: { grip: 0.6, drag: 1.4 },
 };
 
 export const CAR_LENGTH = 22;
