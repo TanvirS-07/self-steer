@@ -22,6 +22,13 @@ const COLORS = {
 // always something to see at the edges, however wide or tall the screen is.
 const SCENE = { x: -800, y: -600, width: WORLD_WIDTH + 1600, height: WORLD_HEIGHT + 1200 };
 
+// Areas kept clear of trees because something else is built there
+const CLEARINGS = [];
+
+function isBlocked(x, y) {
+  return CLEARINGS.some((r) => x > r.x - 12 && x < r.x + r.w + 12 && y > r.y - 12 && y < r.y + r.h + 12);
+}
+
 // The track and scenery never change, so we draw them once to an offscreen
 // canvas and just copy that every frame. `area` is the part of the world that's
 // on screen and `scale` is screen pixels per world unit.
@@ -300,39 +307,91 @@ function drawTrees(ctx, track, random) {
   const trees = [];
 
   // trees grow in clumps, which looks a lot more natural than spreading them evenly
-  for (let clump = 0; clump < 900; clump++) {
+  for (let clump = 0; clump < 1100; clump++) {
     const cx = SCENE.x + random() * SCENE.width;
     const cy = SCENE.y + random() * SCENE.height;
-    const count = 4 + Math.floor(random() * 10);
+    const count = 4 + Math.floor(random() * 12);
+    const pine = random() < 0.25;
     for (let i = 0; i < count; i++) {
-      const x = cx + (random() - 0.5) * 90;
-      const y = cy + (random() - 0.5) * 90;
-      if (track.nearest(x, y).distance < minGap) continue;
-      trees.push({ x, y, r: 9 + random() * 9 });
+      const x = cx + (random() - 0.5) * 100;
+      const y = cy + (random() - 0.5) * 100;
+      if (track.nearest(x, y).distance < minGap || isBlocked(x, y)) continue;
+      trees.push({
+        x,
+        y,
+        r: pine ? 7 + random() * 5 : 8 + random() * 10,
+        pine,
+        // every tree a slightly different shade of green
+        hue: 95 + random() * 30,
+        light: random() * 8,
+        seed: random(),
+      });
     }
   }
 
   // draw top to bottom so lower trees overlap the ones behind them
   trees.sort((a, b) => a.y - b.y);
 
+  ctx.fillStyle = 'rgba(25, 45, 15, 0.3)';
   for (const t of trees) {
-    ctx.fillStyle = COLORS.treeShadow;
     ctx.beginPath();
-    ctx.arc(t.x + 4, t.y + 5, t.r, 0, Math.PI * 2);
+    ctx.ellipse(t.x + t.r * 0.45, t.y + t.r * 0.55, t.r * 1.05, t.r * 0.95, 0, 0, Math.PI * 2);
     ctx.fill();
   }
+
   for (const t of trees) {
-    ctx.fillStyle = COLORS.treeDark;
+    if (t.pine) drawPine(ctx, t);
+    else drawLeafyTree(ctx, t);
+  }
+}
+
+// A round canopy made of a few overlapping blobs, lit from the top left
+function drawLeafyTree(ctx, t) {
+  const lobes = 5;
+  const blobs = [];
+  for (let i = 0; i < lobes; i++) {
+    const angle = (i / lobes) * Math.PI * 2 + t.seed * 6;
+    blobs.push({ x: t.x + Math.cos(angle) * t.r * 0.45, y: t.y + Math.sin(angle) * t.r * 0.45 });
+  }
+
+  ctx.fillStyle = `hsl(${t.hue}, 45%, ${20 + t.light}%)`;
+  for (const b of blobs) {
     ctx.beginPath();
-    ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, t.r * 0.62, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = COLORS.treeMid;
+  }
+  ctx.fillStyle = `hsl(${t.hue}, 42%, ${30 + t.light}%)`;
+  for (const b of blobs) {
     ctx.beginPath();
-    ctx.arc(t.x - t.r * 0.2, t.y - t.r * 0.2, t.r * 0.75, 0, Math.PI * 2);
+    ctx.arc(b.x - t.r * 0.12, b.y - t.r * 0.12, t.r * 0.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = COLORS.treeLight;
+  }
+  ctx.fillStyle = `hsl(${t.hue - 10}, 45%, ${42 + t.light}%)`;
+  ctx.beginPath();
+  ctx.arc(t.x - t.r * 0.3, t.y - t.r * 0.32, t.r * 0.32, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Pines from above look like a dark star
+function drawPine(ctx, t) {
+  const points = 9;
+  const layers = [
+    [1, `hsl(${t.hue + 20}, 40%, ${16 + t.light}%)`],
+    [0.65, `hsl(${t.hue + 20}, 38%, ${24 + t.light}%)`],
+    [0.3, `hsl(${t.hue + 15}, 35%, ${32 + t.light}%)`],
+  ];
+  for (const [size, color] of layers) {
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(t.x - t.r * 0.35, t.y - t.r * 0.4, t.r * 0.35, 0, Math.PI * 2);
+    for (let i = 0; i < points * 2; i++) {
+      const r = (i % 2 === 0 ? t.r : t.r * 0.55) * size;
+      const angle = (i / (points * 2)) * Math.PI * 2 + t.seed;
+      const x = t.x + Math.cos(angle) * r;
+      const y = t.y + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
     ctx.fill();
   }
 }
