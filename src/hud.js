@@ -25,6 +25,13 @@ function drawTile(ctx, x, label, value, color) {
   ctx.fillText(value, x + TILE_WIDTH / 2, 32);
 }
 
+function carWarning(car) {
+  if (car.locked) return 'WHEELS LOCKED';
+  if (car.wheelspin) return 'WHEELSPIN';
+  if (!car.onRoad) return 'OFF TRACK';
+  return null;
+}
+
 export function drawHud(ctx, timer, car, pixelRatio) {
   ctx.save();
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -35,17 +42,22 @@ export function drawHud(ctx, timer, car, pixelRatio) {
     ['LAST', formatTime(timer.lastLap), '#8e24aa'],
     ['BEST', formatTime(timer.bestLap), '#43a047'],
     ['SPEED', `${Math.round(car.speed * 0.6)} km/h`, '#fb8c00'],
+    ['ABS (B)', car.abs ? 'ON' : 'OFF', car.abs ? '#00897b' : '#757575'],
   ];
 
   tiles.forEach(([label, value, color], i) => {
     drawTile(ctx, i * (TILE_WIDTH + 2), label, value, color);
   });
 
-  if (!car.onRoad) {
+  const warning = carWarning(car);
+  if (warning) {
     ctx.font = 'italic bold 16px "Trebuchet MS", sans-serif';
+    const width = ctx.measureText(warning).width + 20;
+    ctx.fillStyle = 'rgba(198, 40, 40, 0.9)';
+    ctx.fillRect(0, TILE_HEIGHT + 4, width, 26);
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'left';
-    ctx.fillText('Off track!', 12, TILE_HEIGHT + 22);
+    ctx.fillText(warning, 10, TILE_HEIGHT + 18);
   }
 
   ctx.restore();
