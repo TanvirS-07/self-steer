@@ -29,6 +29,8 @@ Then open http://localhost:8000.
 | A / ← | Steer left |
 | D / → | Steer right |
 | B | Toggle ABS |
+| T | Toggle traction control |
+| R | Restart |
 
 ## How it's put together
 
@@ -53,7 +55,10 @@ The car is simple but tries to behave like a real one:
 - **Wheel lock and ABS.** The brakes are stronger than the tyres. Without ABS, braking hard locks
   the fronts and the car slides straight on with no steering. ABS holds the brakes just below
   the locking point.
-- **Wheelspin.** It's rear wheel drive, so flooring it at low speed can spin the rears and step
-  the back out.
+- **Wheelspin and traction control.** It's rear wheel drive, so with traction control off,
+  flooring it at low speed spins the rears and steps the back out.
+- **Brake pressure.** The brakes build up over a quarter of a second, so a quick tap scrubs off
+  a little speed rather than stopping the car dead. The tyres also grip less front-to-back than
+  sideways (a friction ellipse), which keeps braking distances believable.
 - **Barriers.** A barrier runs round the whole circuit a fixed distance from the centre line.
   Hit it and you bounce off and lose most of your speed.
