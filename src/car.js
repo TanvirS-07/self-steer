@@ -29,8 +29,8 @@ const SURFACE = {
   grass: { grip: 0.6, drag: 1.4 },
 };
 
-export const CAR_LENGTH = 22;
-export const CAR_WIDTH = 11;
+export const CAR_LENGTH = 28;
+export const CAR_WIDTH = 14;
 
 export class Car {
   constructor(x, y, angle, color = '#1e88e5') {
@@ -191,15 +191,17 @@ export class Car {
   // The barrier is a fixed distance from the centre line. If the car ends up past it,
   // put it back on the barrier and bounce off whatever speed was heading into it.
   keepInsideBarriers(track) {
+    // the side of the car hits the barrier, not its centre
+    const limit = track.barrier - CAR_WIDTH / 2;
     const { index, distance } = track.nearest(this.x, this.y);
-    this.hitBarrier = distance > track.barrier;
+    this.hitBarrier = distance > limit;
     if (!this.hitBarrier) return;
 
     const p = track.path[index];
     const nx = (this.x - p.x) / distance;
     const ny = (this.y - p.y) / distance;
-    this.x = p.x + nx * track.barrier;
-    this.y = p.y + ny * track.barrier;
+    this.x = p.x + nx * limit;
+    this.y = p.y + ny * limit;
 
     const intoWall = this.vx * nx + this.vy * ny;
     if (intoWall > 0) {

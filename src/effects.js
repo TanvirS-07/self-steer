@@ -76,9 +76,9 @@ export class TyreEffects {
 function rearWheels(car) {
   const cos = Math.cos(car.angle);
   const sin = Math.sin(car.angle);
-  const back = -CAR_LENGTH / 2 + 4;
+  const back = -CAR_LENGTH / 2 + 6;
   return [-1, 1].map((side) => {
-    const across = (side * CAR_WIDTH) / 2;
+    const across = (side * (CAR_WIDTH - 2.4)) / 2;
     return {
       x: car.x + cos * back - sin * across,
       y: car.y + sin * back + cos * across,
