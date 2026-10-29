@@ -13,18 +13,46 @@ const ctx = canvas.getContext('2d');
 const track = new Track();
 let scenery = null;
 
-const start = track.start;
-const car = new Car(
-  start.x - start.dirX * 30,
-  start.y - start.dirY * 30,
-  Math.atan2(start.dirY, start.dirX),
-);
-const timer = new LapTimer(track);
 const effects = new TyreEffects();
+let car;
+let timer;
+
+// Puts the car back on the grid and clears the timer and skid marks.
+// ABS and traction control settings carry over.
+function restart() {
+  const start = track.start;
+  const previous = car;
+  car = new Car(
+    start.x - start.dirX * 30,
+    start.y - start.dirY * 30,
+    Math.atan2(start.dirY, start.dirX),
+  );
+  if (previous) {
+    car.abs = previous.abs;
+    car.tractionControl = previous.tractionControl;
+  }
+  timer = new LapTimer(track);
+  effects.clear();
+}
+
+restart();
+
+const restartButton = document.getElementById('restart');
+restartButton.addEventListener('click', () => {
+  restart();
+  restartButton.blur(); // so Space/Enter don't press it again while driving
+});
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
   if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
+  if (e.code === 'KeyR' && !e.repeat) restart();
+
+const restartButton = document.getElementById('restart');
+restartButton.addEventListener('click', () => {
+  restart();
+  restartButton.blur(); // so Space/Enter don't press it again while driving
+});
 });
 
 // how the world maps onto the screen, worked out on resize
