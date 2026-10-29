@@ -1,13 +1,19 @@
 import { clamp } from './math.js';
 
-const ENGINE = 260;
-const REVERSE = 120;
-const TURN_RATE = 3.2;
+// Units are world pixels and seconds. Roughly 5px is a metre.
+const ENGINE = 300;        // acceleration at a standstill
+const TOP_SPEED = 420;
+const BRAKE = 520;
+const REVERSE = 90;
+const GRIP = 430;          // most acceleration the tyres can give in any direction
+const ROLLING_DRAG = 0.15;
+const WHEELBASE = 14;
+const MAX_STEER = 0.55;    // radians the front wheels can turn
 
-// on grass the car loses grip and gets dragged down a lot harder
+// grass has much less grip and slows you down
 const SURFACE = {
-  road: { grip: 9, drag: 0.7 },
-  grass: { grip: 3, drag: 2.8 },
+  road: { grip: 1, drag: 0 },
+  grass: { grip: 0.45, drag: 1.6 },
 };
 
 export const CAR_LENGTH = 22;
@@ -28,31 +34,61 @@ export class Car {
     return Math.hypot(this.vx, this.vy);
   }
 
+  // How fast the car is going in the direction it's pointing (negative when reversing)
+  get forwardSpeed() {
+    return this.vx * Math.cos(this.angle) + this.vy * Math.sin(this.angle);
+  }
+
   update(controls, track, dt) {
-    const fx = Math.cos(this.angle);
-    const fy = Math.sin(this.angle);
-
-    // split the velocity into the part going where the car points and the sideways slide
-    let forward = this.vx * fx + this.vy * fy;
-    let sideways = this.vx * -fy + this.vy * fx;
-
     this.onRoad = track.isOnTrack(this.x, this.y);
     const surface = this.onRoad ? SURFACE.road : SURFACE.grass;
+    const grip = GRIP * surface.grip;
 
-    if (controls.throttle > 0) forward += controls.throttle * ENGINE * dt;
-    else if (controls.throttle < 0) forward += controls.throttle * REVERSE * dt;
+    let forward = this.forwardSpeed;
 
-    forward *= Math.exp(-surface.drag * dt);
-    sideways *= Math.exp(-surface.grip * dt);
+    // Engine and brakes. Holding brake once stopped puts it in reverse.
+    let push = 0;
+    if (controls.brake > 0 && forward > 5) {
+      push = -controls.brake * BRAKE;
+    } else if (controls.brake > 0) {
+      push = -controls.brake * REVERSE;
+    } else if (controls.throttle > 0) {
+      push = controls.throttle * ENGINE * (1 - forward / TOP_SPEED);
+    }
 
-    // you can't turn a car that isn't moving, and reversing flips the steering
-    const turnAmount = clamp(forward / 80, -1, 1);
-    this.angle += controls.steer * TURN_RATE * turnAmount * dt;
+    // The tyres can only push so hard, and whatever grip goes into
+    // speeding up or slowing down isn't available for cornering (the friction circle)
+    push = clamp(push, -grip, grip);
+    const cornerGrip = Math.sqrt(grip * grip - push * push);
 
-    const nfx = Math.cos(this.angle);
-    const nfy = Math.sin(this.angle);
-    this.vx = nfx * forward - nfy * sideways;
-    this.vy = nfy * forward + nfx * sideways;
+    this.vx += Math.cos(this.angle) * push * dt;
+    this.vy += Math.sin(this.angle) * push * dt;
+
+    const drag = Math.exp(-(ROLLING_DRAG + surface.drag) * dt);
+    this.vx *= drag;
+    this.vy *= drag;
+
+    // Steering: the front wheels try to carve an arc. Going round it at speed v
+    // needs v * turnRate of sideways grip, so if the tyres can't give that much
+    // the car turns less than you asked for and runs wide (understeer).
+    forward = this.forwardSpeed;
+    let turnRate = (forward * Math.tan(controls.steer * MAX_STEER)) / WHEELBASE;
+    const maxTurnRate = cornerGrip / Math.max(Math.abs(forward), 1);
+    turnRate = clamp(turnRate, -maxTurnRate, maxTurnRate);
+    this.angle += turnRate * dt;
+
+    // After turning, some of the velocity now points out the side of the car.
+    // The tyres scrub that off, but only as fast as the grip allows; the rest is a slide.
+    const fx = Math.cos(this.angle);
+    const fy = Math.sin(this.angle);
+    forward = this.vx * fx + this.vy * fy;
+    let sideways = this.vx * -fy + this.vy * fx;
+    const scrub = Math.min(Math.abs(sideways), cornerGrip * dt);
+    sideways -= Math.sign(sideways) * scrub;
+
+    this.vx = fx * forward - fy * sideways;
+    this.vy = fy * forward + fx * sideways;
+    this.slip = Math.abs(sideways);
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
