@@ -3,10 +3,12 @@ import { clamp } from './math.js';
 // Units are world pixels and seconds. Roughly 5px is a metre.
 const ENGINE = 300;        // acceleration at a standstill
 const TOP_SPEED = 420;
-const BRAKE = 520;
+const BRAKE = 600;        // more than the tyres can take, so slamming them on locks the wheels
 const REVERSE = 90;
 const GRIP = 430;          // most acceleration the tyres can give in any direction
 const ROLLING_DRAG = 0.15;
+const SLIDING_GRIP = 0.7;  // a skidding tyre grips worse than a rolling one
+const ABS_LIMIT = 0.95;    // ABS keeps braking just under the point where the wheels lock
 const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
 
@@ -28,6 +30,9 @@ export class Car {
     this.vy = 0;
     this.color = color;
     this.onRoad = true;
+    this.abs = true;
+    this.locked = false;
+    this.slip = 0;
   }
 
   get speed() {
@@ -46,10 +51,21 @@ export class Car {
 
     let forward = this.forwardSpeed;
 
+    // Braking harder than the tyres can handle locks the wheels. ABS stops that
+    // by easing off the brakes just before they lock.
+    const braking = controls.brake > 0 && forward > 5;
+    const brakeForce = controls.brake * BRAKE;
+    this.locked = braking && !this.abs && brakeForce > grip;
+
+    if (this.locked) {
+      this.skid(grip, surface, dt);
+      return;
+    }
+
     // Engine and brakes. Holding brake once stopped puts it in reverse.
     let push = 0;
-    if (controls.brake > 0 && forward > 5) {
-      push = -controls.brake * BRAKE;
+    if (braking) {
+      push = -Math.min(brakeForce, grip * ABS_LIMIT);
     } else if (controls.brake > 0) {
       push = -controls.brake * REVERSE;
     } else if (controls.throttle > 0) {
@@ -89,6 +105,25 @@ export class Car {
     this.vx = fx * forward - fy * sideways;
     this.vy = fy * forward + fx * sideways;
     this.slip = Math.abs(sideways);
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+
+  // With the wheels locked the tyres just slide. Friction acts against the direction
+  // of travel, not the way the car is pointing, so steering does nothing.
+  skid(grip, surface, dt) {
+    const speed = this.speed;
+    if (speed > 0) {
+      const slowBy = Math.min(speed, grip * SLIDING_GRIP * dt);
+      this.vx -= (this.vx / speed) * slowBy;
+      this.vy -= (this.vy / speed) * slowBy;
+    }
+
+    const drag = Math.exp(-(ROLLING_DRAG + surface.drag) * dt);
+    this.vx *= drag;
+    this.vy *= drag;
+    this.slip = this.speed;
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
