@@ -2,12 +2,14 @@ import { WORLD_WIDTH, WORLD_HEIGHT } from './track.js';
 import { seededRandom } from './math.js';
 
 const COLORS = {
-  grass: '#7cb342',
-  grassDark: '#6a9f36',
-  grassLight: '#8cc152',
-  sand: '#e6cf94',
-  sandDark: '#d4b978',
-  asphalt: '#5a5d61',
+  grass: '#74a845',
+  grassDark: '#62933a',
+  grassLight: '#86b955',
+  sand: '#e2cd97',
+  sandDark: '#c9b07a',
+  gravel: '#b39b6a',
+  asphalt: '#55585c',
+  asphaltEdge: '#4a4d51',
   kerbRed: '#d83a2e',
   white: '#f4f4f0',
   treeShadow: 'rgba(20, 50, 15, 0.35)',
@@ -34,7 +36,7 @@ export function renderScenery(track, area, scale) {
   const random = seededRandom(7);
 
   drawGrass(ctx, random);
-  drawSandTraps(ctx, track);
+  drawSandTraps(ctx, track, random);
   drawRoad(ctx, track, random);
   drawBarriers(ctx, track, area, scale);
   drawStartLine(ctx, track);
@@ -48,10 +50,23 @@ function drawGrass(ctx, random) {
   ctx.fillStyle = COLORS.grass;
   ctx.fillRect(SCENE.x, SCENE.y, SCENE.width, SCENE.height);
 
+  // big soft patches of lighter and darker grass, like uneven ground
+  for (let i = 0; i < 500; i++) {
+    const x = SCENE.x + random() * SCENE.width;
+    const y = SCENE.y + random() * SCENE.height;
+    const r = 40 + random() * 140;
+    const light = random() < 0.5;
+    const patch = ctx.createRadialGradient(x, y, 0, x, y, r);
+    patch.addColorStop(0, light ? 'rgba(160, 200, 100, 0.18)' : 'rgba(60, 100, 35, 0.16)');
+    patch.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = patch;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
   // little tufts so it doesn't look like a flat fill
-  for (let i = 0; i < 25000; i++) {
+  for (let i = 0; i < 30000; i++) {
     ctx.fillStyle = random() < 0.5 ? COLORS.grassDark : COLORS.grassLight;
-    ctx.fillRect(SCENE.x + random() * SCENE.width, SCENE.y + random() * SCENE.height, 2, 2);
+    ctx.fillRect(SCENE.x + random() * SCENE.width, SCENE.y + random() * SCENE.height, 1.5, 2.5);
   }
 }
 
@@ -65,28 +80,51 @@ function strokeLoop(ctx, path) {
   ctx.stroke();
 }
 
-// Sand run-off on the outside of the tighter corners
-function drawSandTraps(ctx, track) {
+// Gravel traps on the outside of the tighter corners. Consecutive corner points
+// are joined into one band so each trap is a single smooth shape.
+function drawSandTraps(ctx, track, random) {
   const half = track.width / 2;
-  for (const p of track.path) {
-    if (Math.abs(p.curve) < 0.12) continue;
+  const path = track.path;
+  const runs = [];
+  let run = null;
+
+  for (let i = 0; i < path.length; i++) {
+    const p = path[i];
     const side = p.curve > 0 ? -1 : 1;
-    const x = p.x + p.normalX * side * (half + 12);
-    const y = p.y + p.normalY * side * (half + 12);
-    ctx.fillStyle = COLORS.sandDark;
-    ctx.beginPath();
-    ctx.arc(x, y, 23, 0, Math.PI * 2);
-    ctx.fill();
+    if (Math.abs(p.curve) < 0.1 || (run && run.side !== side)) {
+      run = null;
+      if (Math.abs(p.curve) < 0.1) continue;
+    }
+    if (!run) {
+      run = { side, points: [] };
+      runs.push(run);
+    }
+    run.points.push({
+      x: p.x + p.normalX * side * (half + 14),
+      y: p.y + p.normalY * side * (half + 14),
+    });
   }
-  for (const p of track.path) {
-    if (Math.abs(p.curve) < 0.12) continue;
-    const side = p.curve > 0 ? -1 : 1;
-    const x = p.x + p.normalX * side * (half + 12);
-    const y = p.y + p.normalY * side * (half + 12);
-    ctx.fillStyle = COLORS.sand;
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
-    ctx.fill();
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const [color, width] of [[COLORS.sandDark, 26], [COLORS.sand, 22]]) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    for (const r of runs) {
+      ctx.beginPath();
+      r.points.forEach((pt, i) => (i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
+      ctx.stroke();
+    }
+  }
+
+  // gravel texture
+  for (const r of runs) {
+    for (const pt of r.points) {
+      for (let i = 0; i < 10; i++) {
+        ctx.fillStyle = random() < 0.6 ? COLORS.gravel : '#efe2bb';
+        ctx.fillRect(pt.x + (random() - 0.5) * 20, pt.y + (random() - 0.5) * 20, 1.5, 1.5);
+      }
+    }
   }
 }
 
@@ -100,9 +138,12 @@ function drawRoad(ctx, track, random) {
   ctx.lineWidth = w + 8;
   strokeLoop(ctx, track.path);
 
-  // asphalt
-  ctx.strokeStyle = COLORS.asphalt;
+  // asphalt, a touch darker at the edges where cars don't clean it
+  ctx.strokeStyle = COLORS.asphaltEdge;
   ctx.lineWidth = w;
+  strokeLoop(ctx, track.path);
+  ctx.strokeStyle = COLORS.asphalt;
+  ctx.lineWidth = w - 10;
   strokeLoop(ctx, track.path);
 
   // speckle the asphalt a bit, only where it's actually road
