@@ -33,11 +33,12 @@ Then open http://localhost:8000.
 ## How it's put together
 
 - `src/track.js` - the circuit is a loop of hand-placed points smoothed with a Catmull-Rom spline
-- `src/scenery.js` - draws the grass, road, kerbs and trees once to an offscreen canvas
+- `src/scenery.js` - draws the grass, road, kerbs, trees, buildings and farmland once to an offscreen canvas sized to the screen
 - `src/car.js` - top-down car physics built around a tyre grip budget (see below)
 - `src/effects.js` - skid marks and tyre smoke
 - `src/laps.js` - lap counting and timing
-- `src/hud.js` - the timing bar across the top
+- `src/carSprite.js` - draws the car, kept separate from the physics in `src/car.js`
+- `src/hud.js` - the timing panel across the top
 
 ## Car physics
 
