@@ -116,13 +116,18 @@ function update(dt) {
 }
 
 function draw() {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // the whole scene shakes on a big barrier hit, but the HUD stays put
+  const shake = effects.shakeOffset();
+  ctx.setTransform(1, 0, 0, 1, shake.x, shake.y);
   ctx.drawImage(scenery, 0, 0);
 
-  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
+  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX + shake.x, view.offsetY + shake.y);
   effects.drawMarks(ctx);
+  effects.drawDust(ctx);
+  effects.drawSpeedStreaks(ctx, car);
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
+  effects.drawSparks(ctx);
   lights.draw(ctx, track);
   atmosphere.drawClouds(ctx);
   atmosphere.drawVignette(ctx);
