@@ -16,21 +16,27 @@ const COLORS = {
   treeLight: '#5cb64a',
 };
 
+// Scenery is generated over a much bigger area than the track so there's
+// always something to see at the edges, however wide or tall the screen is.
+const SCENE = { x: -800, y: -600, width: WORLD_WIDTH + 1600, height: WORLD_HEIGHT + 1200 };
+
 // The track and scenery never change, so we draw them once to an offscreen
-// canvas and just copy that every frame.
-export function renderScenery(track, scale = 2) {
+// canvas and just copy that every frame. `area` is the part of the world that's
+// on screen and `scale` is screen pixels per world unit.
+export function renderScenery(track, area, scale) {
   const canvas = document.createElement('canvas');
-  canvas.width = WORLD_WIDTH * scale;
-  canvas.height = WORLD_HEIGHT * scale;
+  canvas.width = Math.ceil(area.width * scale);
+  canvas.height = Math.ceil(area.height * scale);
   const ctx = canvas.getContext('2d');
   ctx.scale(scale, scale);
+  ctx.translate(-area.x, -area.y);
 
   const random = seededRandom(7);
 
   drawGrass(ctx, random);
   drawSandTraps(ctx, track);
   drawRoad(ctx, track, random);
-  drawBarriers(ctx, track, scale);
+  drawBarriers(ctx, track, area, scale);
   drawStartLine(ctx, track);
   drawTyreStacks(ctx, track);
   drawTrees(ctx, track, random);
@@ -40,12 +46,12 @@ export function renderScenery(track, scale = 2) {
 
 function drawGrass(ctx, random) {
   ctx.fillStyle = COLORS.grass;
-  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.fillRect(SCENE.x, SCENE.y, SCENE.width, SCENE.height);
 
   // little tufts so it doesn't look like a flat fill
-  for (let i = 0; i < 6000; i++) {
+  for (let i = 0; i < 25000; i++) {
     ctx.fillStyle = random() < 0.5 ? COLORS.grassDark : COLORS.grassLight;
-    ctx.fillRect(random() * WORLD_WIDTH, random() * WORLD_HEIGHT, 2, 2);
+    ctx.fillRect(SCENE.x + random() * SCENE.width, SCENE.y + random() * SCENE.height, 2, 2);
   }
 }
 
@@ -198,12 +204,13 @@ function drawStartLine(ctx, track) {
 // Grey steel barriers all the way round. The barrier sits at a fixed distance from
 // the centre line, so it's the outline of a very wide stroke along the track. Drawing
 // that stroke and then cutting out the middle leaves just the outline.
-function drawBarriers(ctx, track, scale) {
+function drawBarriers(ctx, track, area, scale) {
   const layer = document.createElement('canvas');
-  layer.width = WORLD_WIDTH * scale;
-  layer.height = WORLD_HEIGHT * scale;
+  layer.width = ctx.canvas.width;
+  layer.height = ctx.canvas.height;
   const lctx = layer.getContext('2d');
   lctx.scale(scale, scale);
+  lctx.translate(-area.x, -area.y);
   lctx.lineJoin = 'round';
 
   lctx.strokeStyle = '#5f646b';
@@ -221,7 +228,7 @@ function drawBarriers(ctx, track, scale) {
   ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
-  ctx.drawImage(layer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.drawImage(layer, area.x, area.y, area.width, area.height);
   ctx.restore();
 }
 
@@ -252,9 +259,9 @@ function drawTrees(ctx, track, random) {
   const trees = [];
 
   // trees grow in clumps, which looks a lot more natural than spreading them evenly
-  for (let clump = 0; clump < 260; clump++) {
-    const cx = random() * WORLD_WIDTH;
-    const cy = random() * WORLD_HEIGHT;
+  for (let clump = 0; clump < 900; clump++) {
+    const cx = SCENE.x + random() * SCENE.width;
+    const cy = SCENE.y + random() * SCENE.height;
     const count = 4 + Math.floor(random() * 10);
     for (let i = 0; i < count; i++) {
       const x = cx + (random() - 0.5) * 90;

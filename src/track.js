@@ -23,6 +23,20 @@ export class Track {
     this.barrier = width / 2 + RUNOFF;
     this.controlPoints = points.map(([x, y]) => ({ x, y }));
     this.path = this.buildPath();
+    this.bounds = this.findBounds();
+  }
+
+  // The box the track and its barriers fit in, used to frame the camera
+  findBounds() {
+    const xs = this.path.map((p) => p.x);
+    const ys = this.path.map((p) => p.y);
+    const pad = this.barrier + 20;
+    return {
+      x: Math.min(...xs) - pad,
+      y: Math.min(...ys) - pad,
+      width: Math.max(...xs) - Math.min(...xs) + pad * 2,
+      height: Math.max(...ys) - Math.min(...ys) + pad * 2,
+    };
   }
 
   // Turn the control points into a dense loop of points along the centre line
