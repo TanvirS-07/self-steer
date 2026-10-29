@@ -1,11 +1,12 @@
 import { clamp } from './math.js';
 
 // Units are world pixels and seconds. Roughly 5px is a metre.
-const ENGINE = 300;        // acceleration at a standstill
+const ENGINE = 290;        // acceleration at a standstill
 const TOP_SPEED = 420;
-const BRAKE = 600;        // more than the tyres can take, so slamming them on locks the wheels
+const BRAKE = 480;         // more than the tyres can take, so slamming them on locks the wheels
 const REVERSE = 90;
-const GRIP = 500;          // most acceleration the tyres can give in any direction
+const GRIP = 500;          // most sideways acceleration the tyres can give
+const LONG_GRIP = 0.6;     // fraction of that available for braking and accelerating
 const ROLLING_DRAG = 0.15;
 const SLIDING_GRIP = 0.7;  // a skidding tyre grips worse than a rolling one
 const ABS_LIMIT = 0.95;    // ABS keeps braking just under the point where the wheels lock
@@ -41,6 +42,7 @@ export class Car {
     this.color = color;
     this.onRoad = true;
     this.abs = true;
+    this.tractionControl = true;
     this.locked = false;
     this.wheelspin = false;
     this.slip = 0;
@@ -92,17 +94,19 @@ export class Car {
     const frontLoad = 0.5 + this.loadShift;
     const frontGrip = grip * frontLoad;
     const rearGrip = grip * (1 - frontLoad);
+    const frontLongGrip = frontGrip * LONG_GRIP;
+    const rearLongGrip = rearGrip * LONG_GRIP;
 
     // The fronts do most of the braking, so they're the ones that lock.
     // ABS stops that by easing off just before they would.
     const braking = controls.brake > 0 && forward > 5;
     const frontBrake = this.brakePedal * BRAKE * BRAKE_BIAS;
-    this.locked = braking && !this.abs && frontBrake > frontGrip;
+    this.locked = braking && !this.abs && frontBrake > frontLongGrip;
     this.braking = braking;
 
     if (this.locked) {
-      this.skid(grip, surface, dt);
-      this.settle(-grip * SLIDING_GRIP, dt);
+      this.skid(grip * LONG_GRIP, surface, dt);
+      this.settle(-grip * LONG_GRIP * SLIDING_GRIP, dt);
       return;
     }
 
@@ -112,8 +116,8 @@ export class Car {
     if (braking) {
       const total = Math.min(
         this.brakePedal * BRAKE,
-        (frontGrip * ABS_LIMIT) / BRAKE_BIAS,
-        (rearGrip * ABS_LIMIT) / (1 - BRAKE_BIAS),
+        (frontLongGrip * ABS_LIMIT) / BRAKE_BIAS,
+        (rearLongGrip * ABS_LIMIT) / (1 - BRAKE_BIAS),
       );
       frontPush = -total * BRAKE_BIAS;
       rearPush = -total * (1 - BRAKE_BIAS);
@@ -122,17 +126,20 @@ export class Car {
     } else if (controls.throttle > 0) {
       // rear wheel drive: too much power at low speed spins the rears up
       rearPush = controls.throttle * ENGINE * (1 - forward / TOP_SPEED);
+      // traction control does for the throttle what ABS does for the brakes
+      if (this.tractionControl) rearPush = Math.min(rearPush, rearLongGrip * ABS_LIMIT);
     }
 
-    this.wheelspin = rearPush > rearGrip;
-    frontPush = clamp(frontPush, -frontGrip, frontGrip);
-    rearPush = clamp(rearPush, -rearGrip, rearGrip);
+    this.wheelspin = rearPush > rearLongGrip;
+    frontPush = clamp(frontPush, -frontLongGrip, frontLongGrip);
+    rearPush = clamp(rearPush, -rearLongGrip, rearLongGrip);
     const push = frontPush + rearPush;
 
     // Whatever grip each tyre spends on speeding up or slowing down isn't
     // available for cornering (the friction circle)
-    const frontCornerGrip = Math.sqrt(frontGrip ** 2 - frontPush ** 2);
-    const rearCornerGrip = Math.sqrt(rearGrip ** 2 - rearPush ** 2);
+    // (really an ellipse, since the tyres are tuned to grip better sideways)
+    const frontCornerGrip = frontGrip * Math.sqrt(1 - (frontPush / frontLongGrip) ** 2);
+    const rearCornerGrip = rearGrip * Math.sqrt(1 - (rearPush / rearLongGrip) ** 2);
 
     this.vx += Math.cos(this.angle) * push * dt;
     this.vy += Math.sin(this.angle) * push * dt;
