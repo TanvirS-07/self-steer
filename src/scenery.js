@@ -376,34 +376,65 @@ function drawShadow(ctx, rect, depth) {
   ctx.fillRect(rect.x + depth, rect.y + depth, rect.w, rect.h);
 }
 
-// Covered grandstand facing the start straight: roof at the back, crowd at the front
+// Covered grandstand facing the start straight. From above you see the roof over
+// the back rows, tiers of seats with people in them, and advertising boards along the front.
 function drawGrandstand(ctx, random) {
   const g = GRANDSTAND;
-  drawShadow(ctx, g, 6);
+  drawShadow(ctx, g, 7);
 
-  // seating, with a dot for each person
-  ctx.fillStyle = '#8d9399';
-  ctx.fillRect(g.x, g.y, g.w, g.h);
-  const shirts = ['#e53935', '#1e88e5', '#fdd835', '#ffffff', '#43a047', '#fb8c00', '#212121', '#8e24aa'];
-  for (let row = g.y + 20; row < g.y + g.h - 3; row += 5) {
-    ctx.fillStyle = '#6d7379';
-    ctx.fillRect(g.x, row + 2.5, g.w, 1);
-    for (let x = g.x + 3; x < g.x + g.w - 3; x += 3.5) {
-      if (random() < 0.2) continue;
+  // concrete tiers, each row a little lighter as it steps down towards the track
+  const rows = 6;
+  const rowHeight = (g.h - 18) / rows;
+  for (let r = 0; r < rows; r++) {
+    ctx.fillStyle = `hsl(210, 8%, ${48 + r * 3}%)`;
+    ctx.fillRect(g.x, g.y + 14 + r * rowHeight, g.w, rowHeight);
+  }
+
+  // seats and spectators, with gaps for the stairs every so often
+  const shirts = ['#e53935', '#1e88e5', '#fdd835', '#fafafa', '#43a047', '#fb8c00', '#263238', '#8e24aa'];
+  for (let r = 0; r < rows; r++) {
+    const y = g.y + 14 + r * rowHeight + rowHeight / 2;
+    for (let x = g.x + 4; x < g.x + g.w - 3; x += 3.2) {
+      if ((x - g.x) % 56 < 5) continue;
+      if (random() < 0.3) {
+        ctx.fillStyle = '#3d6fa8';
+        ctx.fillRect(x - 1, y - 0.8, 2, 1.6);
+        continue;
+      }
       ctx.fillStyle = shirts[Math.floor(random() * shirts.length)];
-      ctx.fillRect(x, row, 2.5, 2.5);
+      ctx.fillRect(x - 1.2, y - 0.4, 2.4, 1.6);
+      ctx.fillStyle = random() < 0.5 ? '#3b2a20' : '#d9a066';
+      ctx.beginPath();
+      ctx.arc(x, y - 0.6, 0.8, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  // roof panels
-  ctx.fillStyle = '#e6e8ea';
-  ctx.fillRect(g.x - 4, g.y - 4, g.w + 8, 22);
-  ctx.fillStyle = '#c4c8cc';
-  for (let x = g.x; x < g.x + g.w; x += 20) {
-    ctx.fillRect(x, g.y - 4, 1.5, 22);
+  // stairs
+  ctx.fillStyle = '#b8bcc0';
+  for (let x = g.x; x < g.x + g.w; x += 56) {
+    ctx.fillRect(x + 0.5, g.y + 14, 3, g.h - 18);
   }
-  ctx.fillStyle = '#b0b5ba';
-  ctx.fillRect(g.x - 4, g.y + 16, g.w + 8, 2);
+
+  // roof, lit from the top left so the back edge is brightest
+  const roof = ctx.createLinearGradient(0, g.y - 6, 0, g.y + 16);
+  roof.addColorStop(0, '#f4f5f6');
+  roof.addColorStop(1, '#c9cdd1');
+  ctx.fillStyle = roof;
+  ctx.fillRect(g.x - 4, g.y - 6, g.w + 8, 22);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+  for (let x = g.x + 10; x < g.x + g.w; x += 22) {
+    ctx.fillRect(x, g.y - 6, 1, 22);
+  }
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.fillRect(g.x - 4, g.y + 15, g.w + 8, 1.5);
+
+  // advertising boards along the front
+  const boards = ['#c62828', '#fafafa', '#1565c0', '#f9a825', '#2e7d32'];
+  for (let x = g.x, i = 0; x < g.x + g.w; x += 40, i++) {
+    ctx.fillStyle = boards[i % boards.length];
+    ctx.fillRect(x, g.y + g.h - 4, Math.min(40, g.x + g.w - x), 4);
+  }
 }
 
 // Pit garages behind the barrier on the start straight
@@ -484,7 +515,7 @@ function drawTyreStacks(ctx, track) {
 }
 
 function drawTrees(ctx, track, random) {
-  const minGap = track.width / 2 + 40;
+  const minGap = track.barrier + 14;
   const trees = [];
 
   // trees grow in clumps, which looks a lot more natural than spreading them evenly
@@ -526,53 +557,67 @@ function drawTrees(ctx, track, random) {
   }
 }
 
-// A round canopy made of a few overlapping blobs, lit from the top left
+// A round canopy made of a few overlapping blobs, lit from the top left.
+// Each layer is drawn for every blob before the next layer, so the darkest
+// colour ends up as an outline round the whole canopy.
 function drawLeafyTree(ctx, t) {
-  const lobes = 5;
+  const lobes = 6;
   const blobs = [];
   for (let i = 0; i < lobes; i++) {
     const angle = (i / lobes) * Math.PI * 2 + t.seed * 6;
-    blobs.push({ x: t.x + Math.cos(angle) * t.r * 0.45, y: t.y + Math.sin(angle) * t.r * 0.45 });
+    const reach = t.r * (0.38 + ((t.seed * 7 + i) % 1) * 0.14);
+    blobs.push({ x: t.x + Math.cos(angle) * reach, y: t.y + Math.sin(angle) * reach });
   }
 
-  ctx.fillStyle = `hsl(${t.hue}, 45%, ${20 + t.light}%)`;
-  for (const b of blobs) {
+  const layers = [
+    [0.66, 0, 14],
+    [0.6, 0, 22],
+    [0.5, -0.1, 30],
+    [0.32, -0.2, 38],
+  ];
+  for (const [size, offset, lightness] of layers) {
+    ctx.fillStyle = `hsl(${t.hue}, 42%, ${lightness + t.light}%)`;
+    for (const b of blobs) {
+      // blobs on the lit side get the highlight, the shaded side doesn't
+      if (size < 0.4 && b.x + b.y > t.x + t.y) continue;
+      ctx.beginPath();
+      ctx.arc(b.x + t.r * offset, b.y + t.r * offset, t.r * size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // a few bright leaf clusters catching the sun
+  ctx.fillStyle = `hsla(${t.hue - 15}, 50%, ${52 + t.light}%, 0.8)`;
+  for (let i = 0; i < 4; i++) {
+    const angle = t.seed * 20 + i * 1.7;
+    const d = t.r * 0.25 * ((i % 3) + 1) * 0.6;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, t.r * 0.62, 0, Math.PI * 2);
+    ctx.arc(t.x - t.r * 0.25 + Math.cos(angle) * d, t.y - t.r * 0.25 + Math.sin(angle) * d, t.r * 0.09, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = `hsl(${t.hue}, 42%, ${30 + t.light}%)`;
-  for (const b of blobs) {
-    ctx.beginPath();
-    ctx.arc(b.x - t.r * 0.12, b.y - t.r * 0.12, t.r * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = `hsl(${t.hue - 10}, 45%, ${42 + t.light}%)`;
-  ctx.beginPath();
-  ctx.arc(t.x - t.r * 0.3, t.y - t.r * 0.32, t.r * 0.32, 0, Math.PI * 2);
-  ctx.fill();
 }
 
-// Pines from above look like a dark star
+// Pines from above: rings of needles getting lighter towards the tip
 function drawPine(ctx, t) {
-  const points = 9;
+  const points = 14;
   const layers = [
-    [1, `hsl(${t.hue + 20}, 40%, ${16 + t.light}%)`],
-    [0.65, `hsl(${t.hue + 20}, 38%, ${24 + t.light}%)`],
-    [0.3, `hsl(${t.hue + 15}, 35%, ${32 + t.light}%)`],
+    [1.05, 0.72, 11],
+    [0.95, 0.72, 17],
+    [0.68, 0.7, 24],
+    [0.4, 0.65, 32],
   ];
-  for (const [size, color] of layers) {
-    ctx.fillStyle = color;
+  layers.forEach(([size, inner, lightness], layer) => {
+    ctx.fillStyle = `hsl(${t.hue + 25}, 38%, ${lightness + t.light}%)`;
     ctx.beginPath();
     for (let i = 0; i < points * 2; i++) {
-      const r = (i % 2 === 0 ? t.r : t.r * 0.55) * size;
-      const angle = (i / (points * 2)) * Math.PI * 2 + t.seed;
-      const x = t.x + Math.cos(angle) * r;
-      const y = t.y + Math.sin(angle) * r;
+      const r = (i % 2 === 0 ? t.r : t.r * inner) * size;
+      const angle = (i / (points * 2)) * Math.PI * 2 + t.seed + layer * 0.2;
+      const x = t.x - layer * 0.4 + Math.cos(angle) * r;
+      const y = t.y - layer * 0.4 + Math.sin(angle) * r;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.closePath();
     ctx.fill();
-  }
+  });
 }
