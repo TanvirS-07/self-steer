@@ -19,6 +19,7 @@ const BARRIER_BOUNCE = 0.3;
 const BARRIER_FRICTION = 0.85;
 const STEER_SPEED = 3;     // how quickly the wheel turns towards full lock, per second
 const CENTRE_SPEED = 6;    // and how quickly it comes back when you let go
+const BRAKE_RAMP = 4;      // brake pressure builds up over a quarter of a second
 const STEER_FALLOFF = 100; // the faster you go, the less lock you get
 
 // grass has much less grip and slows you down
@@ -45,6 +46,7 @@ export class Car {
     this.slip = 0;
     this.loadShift = 0;
     this.steer = 0;
+    this.brakePedal = 0;
     this.hitBarrier = false;
     this.braking = false;
   }
@@ -70,6 +72,14 @@ export class Car {
     const rate = (centring ? CENTRE_SPEED : STEER_SPEED) * dt;
     this.steer += clamp(controls.steer - this.steer, -rate, rate);
 
+    // Brake pressure builds up rather than hitting full force instantly, so a quick
+    // tap scrubs off a bit of speed instead of stopping the car dead. Letting go is instant.
+    if (controls.brake > this.brakePedal) {
+      this.brakePedal = Math.min(controls.brake, this.brakePedal + BRAKE_RAMP * dt);
+    } else {
+      this.brakePedal = controls.brake;
+    }
+
     this.onRoad = track.isOnTrack(this.x, this.y);
     const surface = this.onRoad ? SURFACE.road : SURFACE.grass;
     const grip = GRIP * surface.grip;
@@ -86,7 +96,7 @@ export class Car {
     // The fronts do most of the braking, so they're the ones that lock.
     // ABS stops that by easing off just before they would.
     const braking = controls.brake > 0 && forward > 5;
-    const frontBrake = controls.brake * BRAKE * BRAKE_BIAS;
+    const frontBrake = this.brakePedal * BRAKE * BRAKE_BIAS;
     this.locked = braking && !this.abs && frontBrake > frontGrip;
     this.braking = braking;
 
@@ -101,7 +111,7 @@ export class Car {
     let rearPush = 0;
     if (braking) {
       const total = Math.min(
-        controls.brake * BRAKE,
+        this.brakePedal * BRAKE,
         (frontGrip * ABS_LIMIT) / BRAKE_BIAS,
         (rearGrip * ABS_LIMIT) / (1 - BRAKE_BIAS),
       );
