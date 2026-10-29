@@ -19,6 +19,10 @@ const car = new Car(
 );
 const timer = new LapTimer(track);
 
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
+});
+
 // how the world maps onto the screen, worked out on resize
 const view = { scale: 1, offsetX: 0, offsetY: 0 };
 
