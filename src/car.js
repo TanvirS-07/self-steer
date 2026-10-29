@@ -17,7 +17,9 @@ const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
 const BARRIER_BOUNCE = 0.3;
 const BARRIER_FRICTION = 0.85;
-const STEER_SPEED = 5;     // how quickly the wheel turns from centre to full lock, per second
+const STEER_SPEED = 3;     // how quickly the wheel turns towards full lock, per second
+const CENTRE_SPEED = 6;    // and how quickly it comes back when you let go
+const STEER_FALLOFF = 100; // the faster you go, the less lock you get
 
 // grass has much less grip and slows you down
 const SURFACE = {
@@ -63,8 +65,9 @@ export class Car {
   drive(controls, track, dt) {
     // Turn the wheel gradually towards where the driver wants it, instead of
     // snapping straight to full lock like a keyboard would
-    const steerChange = clamp(controls.steer - this.steer, -STEER_SPEED * dt, STEER_SPEED * dt);
-    this.steer += steerChange;
+    const centring = Math.abs(controls.steer) < Math.abs(this.steer);
+    const rate = (centring ? CENTRE_SPEED : STEER_SPEED) * dt;
+    this.steer += clamp(controls.steer - this.steer, -rate, rate);
 
     this.onRoad = track.isOnTrack(this.x, this.y);
     const surface = this.onRoad ? SURFACE.road : SURFACE.grass;
@@ -132,7 +135,10 @@ export class Car {
     // and runs wide (understeer).
     forward = this.forwardSpeed;
     const speed = Math.max(Math.abs(forward), 1);
-    let turnRate = (forward * Math.tan(this.steer * MAX_STEER)) / WHEELBASE;
+    // Like speed-sensitive power steering: full lock at walking pace, much less on
+    // a straight at full speed, so a tap of the key doesn't throw the car sideways
+    const lock = MAX_STEER / (1 + speed / STEER_FALLOFF);
+    let turnRate = (forward * Math.tan(this.steer * lock)) / WHEELBASE;
     const maxTurnRate = frontCornerGrip / (frontLoad * speed);
     turnRate = clamp(turnRate, -maxTurnRate, maxTurnRate);
 
