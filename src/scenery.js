@@ -27,8 +27,25 @@ const GRANDSTAND = { x: 420, y: 630, w: 440, h: 42 };
 const PIT_BUILDING = { x: 380, y: 850, w: 500, h: 28 };
 const PADDOCK = { x: 380, y: 886, w: 500, h: 70 };
 
+// Farmland around the circuit. Mostly off screen on a 16:9 display but it fills
+// the edges on wider or taller screens.
+const FIELDS = [
+  { x: -260, y: 90, w: 290, h: 200, crop: 'wheat' },
+  { x: -260, y: 320, w: 290, h: 210, crop: 'lettuce' },
+  { x: 1650, y: 290, w: 250, h: 190, crop: 'ploughed' },
+  { x: 1650, y: 510, w: 250, h: 180, crop: 'wheat' },
+  { x: 960, y: 910, w: 300, h: 150, crop: 'lettuce' },
+  { x: 250, y: -330, w: 330, h: 170, crop: 'ploughed' },
+];
+const FARMHOUSE = { x: -150, y: 560, w: 46, h: 34 };
+const DIRT_ROADS = [
+  [[-500, 305], [-120, 305], [20, 300], [40, 240], [30, -200]],
+  [[1600, 500], [1700, 497], [1990, 505]],
+  [[380, 956], [380, 1010], [900, 1000], [1300, 905], [1600, 700], [1640, 500]],
+];
+
 // Areas kept clear of trees because something else is built there
-const CLEARINGS = [GRANDSTAND, PIT_BUILDING, PADDOCK];
+const CLEARINGS = [GRANDSTAND, PIT_BUILDING, PADDOCK, FARMHOUSE, ...FIELDS];
 
 function isBlocked(x, y) {
   return CLEARINGS.some((r) => x > r.x - 20 && x < r.x + r.w + 20 && y > r.y - 20 && y < r.y + r.h + 20);
@@ -48,6 +65,9 @@ export function renderScenery(track, area, scale) {
   const random = seededRandom(7);
 
   drawGrass(ctx, random);
+  drawFields(ctx);
+  drawDirtRoads(ctx);
+  drawFarmhouse(ctx);
   drawSandTraps(ctx, track, random);
   drawRoad(ctx, track, random);
   drawBarriers(ctx, track, area, scale);
@@ -299,6 +319,56 @@ function drawBarriers(ctx, track, area, scale) {
       ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
     }
   }
+}
+
+const CROPS = {
+  wheat: { base: '#d8b45a', row: '#c29a42' },
+  lettuce: { base: '#5f9a3a', row: '#4a7f2c' },
+  ploughed: { base: '#8a6a45', row: '#735638' },
+};
+
+// Fields are a base colour with darker rows across them and a hedge round the edge
+function drawFields(ctx) {
+  for (const f of FIELDS) {
+    const crop = CROPS[f.crop];
+    ctx.fillStyle = crop.base;
+    ctx.fillRect(f.x, f.y, f.w, f.h);
+    ctx.fillStyle = crop.row;
+    for (let y = f.y + 3; y < f.y + f.h; y += 6) {
+      ctx.fillRect(f.x, y, f.w, 2);
+    }
+    ctx.strokeStyle = '#3d6b26';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(f.x, f.y, f.w, f.h);
+  }
+}
+
+function drawDirtRoads(ctx) {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const [color, width] of [['#b8996b', 13], ['#d6bd8f', 9]]) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    for (const road of DIRT_ROADS) {
+      ctx.beginPath();
+      road.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.stroke();
+    }
+  }
+}
+
+// A house with a pitched roof: two halves in different shades so it looks lit from one side
+function drawFarmhouse(ctx) {
+  const h = FARMHOUSE;
+  drawShadow(ctx, h, 5);
+  ctx.fillStyle = '#b5523b';
+  ctx.fillRect(h.x, h.y, h.w, h.h / 2);
+  ctx.fillStyle = '#8e3d2c';
+  ctx.fillRect(h.x, h.y + h.h / 2, h.w, h.h / 2);
+  ctx.fillStyle = '#6e2e21';
+  ctx.fillRect(h.x, h.y + h.h / 2 - 1, h.w, 2);
+  ctx.fillStyle = '#9e9e9e';
+  ctx.fillRect(h.x + 8, h.y + 4, 6, 6);
 }
 
 function drawShadow(ctx, rect, depth) {
