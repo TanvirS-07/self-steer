@@ -54,3 +54,5 @@ The car is simple but tries to behave like a real one:
   the locking point.
 - **Wheelspin.** It's rear wheel drive, so flooring it at low speed can spin the rears and step
   the back out.
+- **Barriers.** A barrier runs round the whole circuit a fixed distance from the centre line.
+  Hit it and you bounce off and lose most of your speed.
