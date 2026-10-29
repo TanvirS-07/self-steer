@@ -4,6 +4,7 @@ import { Car } from './car.js';
 import { readKeyboard } from './input.js';
 import { LapTimer } from './laps.js';
 import { drawHud } from './hud.js';
+import { TyreEffects } from './effects.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -18,6 +19,7 @@ const car = new Car(
   Math.atan2(start.dirY, start.dirX),
 );
 const timer = new LapTimer(track);
+const effects = new TyreEffects();
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
@@ -55,6 +57,7 @@ function frame(now) {
 function update(dt) {
   car.update(readKeyboard(), track, dt);
   timer.update(car, dt);
+  effects.update(car, dt);
 }
 
 function draw() {
@@ -64,7 +67,9 @@ function draw() {
 
   ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
   ctx.drawImage(scenery, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  effects.drawMarks(ctx);
   car.draw(ctx);
+  effects.drawSmoke(ctx);
 
   drawHud(ctx, timer, car, window.devicePixelRatio || 1);
 }
