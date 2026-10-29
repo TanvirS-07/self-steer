@@ -15,6 +15,7 @@ const OVERSTEER = 1.2;
 const MAX_OVERSTEER = 1.5; // rad/s, so a slide stays catchable
 const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
+const STEER_SPEED = 5;     // how quickly the wheel turns from centre to full lock, per second
 
 // grass has much less grip and slows you down
 const SURFACE = {
@@ -39,6 +40,7 @@ export class Car {
     this.wheelspin = false;
     this.slip = 0;
     this.loadShift = 0;
+    this.steer = 0;
   }
 
   get speed() {
@@ -51,6 +53,11 @@ export class Car {
   }
 
   update(controls, track, dt) {
+    // Turn the wheel gradually towards where the driver wants it, instead of
+    // snapping straight to full lock like a keyboard would
+    const steerChange = clamp(controls.steer - this.steer, -STEER_SPEED * dt, STEER_SPEED * dt);
+    this.steer += steerChange;
+
     this.onRoad = track.isOnTrack(this.x, this.y);
     const surface = this.onRoad ? SURFACE.road : SURFACE.grass;
     const grip = GRIP * surface.grip;
@@ -117,7 +124,7 @@ export class Car {
     // and runs wide (understeer).
     forward = this.forwardSpeed;
     const speed = Math.max(Math.abs(forward), 1);
-    let turnRate = (forward * Math.tan(controls.steer * MAX_STEER)) / WHEELBASE;
+    let turnRate = (forward * Math.tan(this.steer * MAX_STEER)) / WHEELBASE;
     const maxTurnRate = frontCornerGrip / (frontLoad * speed);
     turnRate = clamp(turnRate, -maxTurnRate, maxTurnRate);
 
