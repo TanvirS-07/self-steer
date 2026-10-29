@@ -1,5 +1,7 @@
-const TILE_WIDTH = 150;
-const TILE_HEIGHT = 46;
+const SECTION_WIDTH = 104;
+const PANEL_HEIGHT = 48;
+const LABEL_FONT = '600 10px system-ui, sans-serif';
+const VALUE_FONT = '600 18px ui-monospace, Menlo, Consolas, monospace';
 
 function formatTime(seconds) {
   if (seconds === null) return '--.---';
@@ -8,56 +10,80 @@ function formatTime(seconds) {
   return mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : secs;
 }
 
-function drawTile(ctx, x, label, value, color) {
-  ctx.fillStyle = 'rgba(20, 28, 36, 0.85)';
-  ctx.fillRect(x, 0, TILE_WIDTH, TILE_HEIGHT);
-
-  ctx.fillStyle = color;
-  ctx.fillRect(x, 0, TILE_WIDTH, 18);
-
-  ctx.font = 'italic bold 13px "Trebuchet MS", sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + TILE_WIDTH / 2, 9);
-
-  ctx.font = 'italic bold 20px "Trebuchet MS", sans-serif';
-  ctx.fillText(value, x + TILE_WIDTH / 2, 32);
-}
-
 function carWarning(car) {
   if (car.locked) return 'WHEELS LOCKED';
   if (car.wheelspin) return 'WHEELSPIN';
+  if (car.hitBarrier) return 'BARRIER';
   if (!car.onRoad) return 'OFF TRACK';
   return null;
 }
 
+function drawSection(ctx, x, label, value, valueColor = '#fff') {
+  const centre = x + SECTION_WIDTH / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = LABEL_FONT;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.letterSpacing = '1.5px';
+  ctx.fillText(label, centre, 15);
+  ctx.letterSpacing = '0px';
+
+  ctx.font = VALUE_FONT;
+  ctx.fillStyle = valueColor;
+  ctx.fillText(value, centre, 33);
+}
+
+// A single timing panel centred along the top of the screen
 export function drawHud(ctx, timer, car, pixelRatio) {
   ctx.save();
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
-  const tiles = [
-    ['LAP', String(timer.lap), '#1e88e5'],
-    ['TIME', formatTime(timer.lapTime), '#e53935'],
-    ['LAST', formatTime(timer.lastLap), '#8e24aa'],
-    ['BEST', formatTime(timer.bestLap), '#43a047'],
-    ['SPEED', `${Math.round(car.speed * 0.6)} km/h`, '#fb8c00'],
-    ['ABS (B)', car.abs ? 'ON' : 'OFF', car.abs ? '#00897b' : '#757575'],
+  const bestIsLast = timer.bestLap !== null && timer.bestLap === timer.lastLap;
+  const sections = [
+    ['LAP', String(timer.lap)],
+    ['TIME', formatTime(timer.lapTime)],
+    ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
+    ['BEST', formatTime(timer.bestLap), '#b388ff'],
+    ['KM/H', String(Math.round(car.speed * 0.6))],
+    ['ABS · B', car.abs ? 'ON' : 'OFF', car.abs ? '#69f0ae' : '#ff8a80'],
   ];
 
-  tiles.forEach(([label, value, color], i) => {
-    drawTile(ctx, i * (TILE_WIDTH + 2), label, value, color);
+  const width = sections.length * SECTION_WIDTH;
+  const screenWidth = ctx.canvas.width / pixelRatio;
+  const left = Math.round((screenWidth - width) / 2);
+
+  ctx.fillStyle = 'rgba(16, 20, 24, 0.82)';
+  ctx.beginPath();
+  ctx.roundRect(left, 6, width, PANEL_HEIGHT, 10);
+  ctx.fill();
+
+  sections.forEach(([label, value, color], i) => {
+    const x = left + i * SECTION_WIDTH;
+    if (i > 0) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillRect(x, 16, 1, PANEL_HEIGHT - 20);
+    }
+    ctx.save();
+    ctx.translate(0, 6);
+    drawSection(ctx, x, label, value, color);
+    ctx.restore();
   });
 
   const warning = carWarning(car);
   if (warning) {
-    ctx.font = 'italic bold 16px "Trebuchet MS", sans-serif';
-    const width = ctx.measureText(warning).width + 20;
-    ctx.fillStyle = 'rgba(198, 40, 40, 0.9)';
-    ctx.fillRect(0, TILE_HEIGHT + 4, width, 26);
+    ctx.font = '700 12px system-ui, sans-serif';
+    ctx.letterSpacing = '1.5px';
+    const pillWidth = ctx.measureText(warning).width + 28;
+    const x = Math.round((screenWidth - pillWidth) / 2);
+    ctx.fillStyle = 'rgba(211, 47, 47, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect(x, PANEL_HEIGHT + 12, pillWidth, 24, 12);
+    ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.textAlign = 'left';
-    ctx.fillText(warning, 10, TILE_HEIGHT + 18);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(warning, x + pillWidth / 2, PANEL_HEIGHT + 24);
   }
 
   ctx.restore();
