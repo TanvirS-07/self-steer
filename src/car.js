@@ -9,6 +9,10 @@ const GRIP = 430;          // most acceleration the tyres can give in any direct
 const ROLLING_DRAG = 0.15;
 const SLIDING_GRIP = 0.7;  // a skidding tyre grips worse than a rolling one
 const ABS_LIMIT = 0.95;    // ABS keeps braking just under the point where the wheels lock
+const BRAKE_BIAS = 0.6;    // share of braking done by the front tyres
+const WEIGHT_TRANSFER = 0.15;
+const OVERSTEER = 1.2;
+const MAX_OVERSTEER = 1.5; // rad/s, so a slide stays catchable
 const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
 
@@ -32,7 +36,9 @@ export class Car {
     this.onRoad = true;
     this.abs = true;
     this.locked = false;
+    this.wheelspin = false;
     this.slip = 0;
+    this.loadShift = 0;
   }
 
   get speed() {
@@ -51,31 +57,52 @@ export class Car {
 
     let forward = this.forwardSpeed;
 
-    // Braking harder than the tyres can handle locks the wheels. ABS stops that
-    // by easing off the brakes just before they lock.
+    // Weight transfer: braking pitches the car forward and loads up the front tyres,
+    // accelerating squats it onto the rear. More load on a tyre means more grip.
+    // It eases in rather than snapping, like the suspension settling.
+    const frontLoad = 0.5 + this.loadShift;
+    const frontGrip = grip * frontLoad;
+    const rearGrip = grip * (1 - frontLoad);
+
+    // The fronts do most of the braking, so they're the ones that lock.
+    // ABS stops that by easing off just before they would.
     const braking = controls.brake > 0 && forward > 5;
-    const brakeForce = controls.brake * BRAKE;
-    this.locked = braking && !this.abs && brakeForce > grip;
+    const frontBrake = controls.brake * BRAKE * BRAKE_BIAS;
+    this.locked = braking && !this.abs && frontBrake > frontGrip;
 
     if (this.locked) {
       this.skid(grip, surface, dt);
+      this.settle(-grip * SLIDING_GRIP, dt);
       return;
     }
 
-    // Engine and brakes. Holding brake once stopped puts it in reverse.
-    let push = 0;
+    // How hard each axle is pushing the car forwards or backwards
+    let frontPush = 0;
+    let rearPush = 0;
     if (braking) {
-      push = -Math.min(brakeForce, grip * ABS_LIMIT);
+      const total = Math.min(
+        controls.brake * BRAKE,
+        (frontGrip * ABS_LIMIT) / BRAKE_BIAS,
+        (rearGrip * ABS_LIMIT) / (1 - BRAKE_BIAS),
+      );
+      frontPush = -total * BRAKE_BIAS;
+      rearPush = -total * (1 - BRAKE_BIAS);
     } else if (controls.brake > 0) {
-      push = -controls.brake * REVERSE;
+      rearPush = -controls.brake * REVERSE;
     } else if (controls.throttle > 0) {
-      push = controls.throttle * ENGINE * (1 - forward / TOP_SPEED);
+      // rear wheel drive: too much power at low speed spins the rears up
+      rearPush = controls.throttle * ENGINE * (1 - forward / TOP_SPEED);
     }
 
-    // The tyres can only push so hard, and whatever grip goes into
-    // speeding up or slowing down isn't available for cornering (the friction circle)
-    push = clamp(push, -grip, grip);
-    const cornerGrip = Math.sqrt(grip * grip - push * push);
+    this.wheelspin = rearPush > rearGrip;
+    frontPush = clamp(frontPush, -frontGrip, frontGrip);
+    rearPush = clamp(rearPush, -rearGrip, rearGrip);
+    const push = frontPush + rearPush;
+
+    // Whatever grip each tyre spends on speeding up or slowing down isn't
+    // available for cornering (the friction circle)
+    const frontCornerGrip = Math.sqrt(frontGrip ** 2 - frontPush ** 2);
+    const rearCornerGrip = Math.sqrt(rearGrip ** 2 - rearPush ** 2);
 
     this.vx += Math.cos(this.angle) * push * dt;
     this.vy += Math.sin(this.angle) * push * dt;
@@ -85,12 +112,21 @@ export class Car {
     this.vy *= drag;
 
     // Steering: the front wheels try to carve an arc. Going round it at speed v
-    // needs v * turnRate of sideways grip, so if the tyres can't give that much
-    // the car turns less than you asked for and runs wide (understeer).
+    // needs v * turnRate of sideways grip, shared between the axles by weight.
+    // If the fronts can't give their share the car turns less than you asked
+    // and runs wide (understeer).
     forward = this.forwardSpeed;
+    const speed = Math.max(Math.abs(forward), 1);
     let turnRate = (forward * Math.tan(controls.steer * MAX_STEER)) / WHEELBASE;
-    const maxTurnRate = cornerGrip / Math.max(Math.abs(forward), 1);
+    const maxTurnRate = frontCornerGrip / (frontLoad * speed);
     turnRate = clamp(turnRate, -maxTurnRate, maxTurnRate);
+
+    // If the rears can't hold their share the back steps out and the car
+    // rotates more than you asked (oversteer)
+    const rearNeeded = Math.abs(turnRate) * speed * (1 - frontLoad);
+    const rearShortfall = Math.max(0, rearNeeded - rearCornerGrip);
+    turnRate += Math.sign(turnRate) * Math.min((rearShortfall / speed) * OVERSTEER, MAX_OVERSTEER);
+
     this.angle += turnRate * dt;
 
     // After turning, some of the velocity now points out the side of the car.
@@ -99,8 +135,10 @@ export class Car {
     const fy = Math.sin(this.angle);
     forward = this.vx * fx + this.vy * fy;
     let sideways = this.vx * -fy + this.vy * fx;
-    const scrub = Math.min(Math.abs(sideways), cornerGrip * dt);
+    const scrub = Math.min(Math.abs(sideways), (frontCornerGrip + rearCornerGrip) * dt);
     sideways -= Math.sign(sideways) * scrub;
+
+    this.settle(push, dt);
 
     this.vx = fx * forward - fy * sideways;
     this.vy = fy * forward + fx * sideways;
@@ -108,6 +146,12 @@ export class Car {
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+  }
+
+  // Moves weight towards the front under braking and the rear under power
+  settle(push, dt) {
+    const target = clamp(-push / GRIP, -1, 1) * WEIGHT_TRANSFER;
+    this.loadShift += (target - this.loadShift) * Math.min(1, 6 * dt);
   }
 
   // With the wheels locked the tyres just slide. Friction acts against the direction
