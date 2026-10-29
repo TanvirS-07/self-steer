@@ -30,6 +30,7 @@ export function renderScenery(track, scale = 2) {
   drawGrass(ctx, random);
   drawSandTraps(ctx, track);
   drawRoad(ctx, track, random);
+  drawBarriers(ctx, track, scale);
   drawStartLine(ctx, track);
   drawTyreStacks(ctx, track);
   drawTrees(ctx, track, random);
@@ -64,21 +65,21 @@ function drawSandTraps(ctx, track) {
   for (const p of track.path) {
     if (Math.abs(p.curve) < 0.12) continue;
     const side = p.curve > 0 ? -1 : 1;
-    const x = p.x + p.normalX * side * (half + 14);
-    const y = p.y + p.normalY * side * (half + 14);
+    const x = p.x + p.normalX * side * (half + 12);
+    const y = p.y + p.normalY * side * (half + 12);
     ctx.fillStyle = COLORS.sandDark;
     ctx.beginPath();
-    ctx.arc(x, y, 26, 0, Math.PI * 2);
+    ctx.arc(x, y, 23, 0, Math.PI * 2);
     ctx.fill();
   }
   for (const p of track.path) {
     if (Math.abs(p.curve) < 0.12) continue;
     const side = p.curve > 0 ? -1 : 1;
-    const x = p.x + p.normalX * side * (half + 14);
-    const y = p.y + p.normalY * side * (half + 14);
+    const x = p.x + p.normalX * side * (half + 12);
+    const y = p.y + p.normalY * side * (half + 12);
     ctx.fillStyle = COLORS.sand;
     ctx.beginPath();
-    ctx.arc(x, y, 23, 0, Math.PI * 2);
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -194,6 +195,36 @@ function drawStartLine(ctx, track) {
   ctx.restore();
 }
 
+// Grey steel barriers all the way round. The barrier sits at a fixed distance from
+// the centre line, so it's the outline of a very wide stroke along the track. Drawing
+// that stroke and then cutting out the middle leaves just the outline.
+function drawBarriers(ctx, track, scale) {
+  const layer = document.createElement('canvas');
+  layer.width = WORLD_WIDTH * scale;
+  layer.height = WORLD_HEIGHT * scale;
+  const lctx = layer.getContext('2d');
+  lctx.scale(scale, scale);
+  lctx.lineJoin = 'round';
+
+  lctx.strokeStyle = '#5f646b';
+  lctx.lineWidth = track.barrier * 2 + 6;
+  strokeLoop(lctx, track.path);
+  lctx.strokeStyle = '#c3c7cc';
+  lctx.lineWidth = track.barrier * 2 + 4;
+  strokeLoop(lctx, track.path);
+
+  lctx.globalCompositeOperation = 'destination-out';
+  lctx.lineWidth = track.barrier * 2;
+  strokeLoop(lctx, track.path);
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  ctx.drawImage(layer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.restore();
+}
+
 // Stacks of tyres on the inside of the sharpest corners
 function drawTyreStacks(ctx, track) {
   const half = track.width / 2;
@@ -202,8 +233,8 @@ function drawTyreStacks(ctx, track) {
     const p = path[i];
     if (Math.abs(p.curve) < 0.2) continue;
     const side = p.curve > 0 ? 1 : -1;
-    const x = p.x + p.normalX * side * (half + 16);
-    const y = p.y + p.normalY * side * (half + 16);
+    const x = p.x + p.normalX * side * (track.barrier - 5);
+    const y = p.y + p.normalY * side * (track.barrier - 5);
     ctx.fillStyle = '#222';
     ctx.beginPath();
     ctx.arc(x, y, 4.5, 0, Math.PI * 2);
