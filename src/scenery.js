@@ -437,31 +437,42 @@ function drawGrandstand(ctx, random) {
   }
 }
 
-// Pit garages behind the barrier on the start straight
+// Pit garages behind the barrier on the start straight: a long flat roof with
+// team colours over each garage door along the front
 function drawPitBuilding(ctx) {
   const p = PIT_BUILDING;
-  drawShadow(ctx, p, 5);
+  drawShadow(ctx, p, 6);
 
-  ctx.fillStyle = '#3e4349';
+  const roof = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+  roof.addColorStop(0, '#5b6168');
+  roof.addColorStop(1, '#40454b');
+  ctx.fillStyle = roof;
   ctx.fillRect(p.x, p.y, p.w, p.h);
-  ctx.fillStyle = '#4c5258';
-  ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4);
+  ctx.strokeStyle = '#2c3035';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
 
-  // a red stripe of team awnings along the front
-  for (let x = p.x + 4; x < p.x + p.w - 20; x += 24) {
-    ctx.fillStyle = '#c62828';
-    ctx.fillRect(x, p.y + 2, 20, 5);
+  // one garage per team, each with its colour on the awning
+  const teams = ['#1e88e5', '#e53935', '#fdd835', '#43a047', '#fafafa', '#fb8c00', '#8e24aa'];
+  const garage = 25;
+  for (let x = p.x + 2, i = 0; x + garage <= p.x + p.w - 2; x += garage, i++) {
+    ctx.fillStyle = teams[i % teams.length];
+    ctx.fillRect(x + 1, p.y + 1.5, garage - 2, 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(x + 1, p.y + 5.5, garage - 2, 1);
+    ctx.fillRect(x, p.y + 7, 1, p.h - 9);
   }
 
-  // air conditioning units on the roof
-  ctx.fillStyle = '#9ea4aa';
-  for (let x = p.x + 30; x < p.x + p.w - 20; x += 70) {
-    ctx.fillRect(x, p.y + 12, 10, 8);
-    ctx.fillStyle = '#7d838a';
+  // skylights and air conditioning units on the roof
+  for (let x = p.x + 18; x < p.x + p.w - 20; x += 50) {
+    ctx.fillStyle = '#8fb3c9';
+    ctx.fillRect(x, p.y + 10, 14, 5);
+    ctx.fillStyle = '#a9afb5';
+    ctx.fillRect(x + 22, p.y + 12, 9, 9);
+    ctx.fillStyle = '#6f757c';
     ctx.beginPath();
-    ctx.arc(x + 5, p.y + 16, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 26.5, p.y + 16.5, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#9ea4aa';
   }
 }
 
@@ -479,16 +490,29 @@ function drawPaddock(ctx, random) {
     ctx.stroke();
   }
 
-  const liveries = ['#1e88e5', '#e53935', '#fdd835', '#43a047', '#ffffff', '#fb8c00'];
-  for (let x = p.x + 10; x < p.x + p.w - 20; x += 40) {
-    if (random() < 0.25) continue;
-    const truck = { x, y: p.y + 12, w: 16, h: 46 };
-    drawShadow(ctx, truck, 3);
-    ctx.fillStyle = '#f2f2f2';
-    ctx.fillRect(truck.x, truck.y + 10, truck.w, truck.h - 10);
-    ctx.fillStyle = liveries[Math.floor(random() * liveries.length)];
-    ctx.fillRect(truck.x, truck.y, truck.w, 9);
-    ctx.fillRect(truck.x + 6, truck.y + 12, 4, truck.h - 14);
+  // articulated team trucks, cab at the top, all parked nose-out
+  const liveries = ['#1e88e5', '#e53935', '#fdd835', '#43a047', '#fb8c00', '#8e24aa'];
+  for (let x = p.x + 12, i = 0; x < p.x + p.w - 20; x += 38, i++) {
+    if (random() < 0.2) continue;
+    const colour = liveries[i % liveries.length];
+    const cab = { x, y: p.y + 6, w: 14, h: 11 };
+    const trailer = { x, y: p.y + 19, w: 14, h: 44 };
+    drawShadow(ctx, { x, y: cab.y, w: 14, h: 57 }, 3);
+
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.roundRect(cab.x, cab.y, cab.w, cab.h, 2);
+    ctx.fill();
+    ctx.fillStyle = '#1c262d';
+    ctx.fillRect(cab.x + 1.5, cab.y + 1, cab.w - 3, 2.5);
+
+    ctx.fillStyle = '#f3f4f5';
+    ctx.fillRect(trailer.x, trailer.y, trailer.w, trailer.h);
+    ctx.fillStyle = colour;
+    ctx.fillRect(trailer.x, trailer.y + trailer.h - 12, trailer.w, 12);
+    ctx.fillRect(trailer.x + 5.5, trailer.y, 3, trailer.h);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(trailer.x + trailer.w - 2, trailer.y, 2, trailer.h);
   }
 }
 
