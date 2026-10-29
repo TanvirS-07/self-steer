@@ -6,7 +6,9 @@ The plan is for a population of cars, each controlled by a small neural network,
 through neuroevolution. The best drivers from each generation get copied and mutated, and over time
 they figure out the racing line on their own.
 
-**Status:** early days. Right now there's the track and a car you can drive yourself.
+**Status:** early days. Right now there's the track and a car you can drive yourself. You can't
+just hold the throttle all the way round: brake too late and you'll run wide, brake too hard
+without ABS and the wheels lock.
 
 ## Running it
 
@@ -23,14 +25,32 @@ Then open http://localhost:8000.
 | Key | Action |
 | --- | --- |
 | W / ↑ | Accelerate |
-| S / ↓ | Brake / reverse |
+| S / ↓ | Brake (reverse once stopped) |
 | A / ← | Steer left |
 | D / → | Steer right |
+| B | Toggle ABS |
 
 ## How it's put together
 
 - `src/track.js` - the circuit is a loop of hand-placed points smoothed with a Catmull-Rom spline
 - `src/scenery.js` - draws the grass, road, kerbs and trees once to an offscreen canvas
-- `src/car.js` - simple top-down car physics with separate forward and sideways grip
+- `src/car.js` - top-down car physics built around a tyre grip budget (see below)
+- `src/effects.js` - skid marks and tyre smoke
 - `src/laps.js` - lap counting and timing
 - `src/hud.js` - the timing bar across the top
+
+## Car physics
+
+The car is simple but tries to behave like a real one:
+
+- **Friction circle.** Each tyre can only produce so much grip. Grip used for braking or
+  accelerating isn't available for turning, so braking mid-corner makes the car run wide.
+- **Cornering limit.** Turning at speed `v` needs `v × turn rate` of sideways grip. Ask for more
+  than the front tyres have and the car understeers; if the rears run out it oversteers.
+- **Weight transfer.** Braking shifts load onto the front tyres and accelerating shifts it to
+  the rear, which changes how much grip each end has.
+- **Wheel lock and ABS.** The brakes are stronger than the tyres. Without ABS, braking hard locks
+  the fronts and the car slides straight on with no steering. ABS holds the brakes just below
+  the locking point.
+- **Wheelspin.** It's rear wheel drive, so flooring it at low speed can spin the rears and step
+  the back out.
