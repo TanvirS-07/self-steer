@@ -7,6 +7,7 @@ import { LapTimer } from './laps.js';
 import { drawHud } from './hud.js';
 import { TyreEffects } from './effects.js';
 import { StartLights } from './startLights.js';
+import { Atmosphere } from './atmosphere.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -16,6 +17,13 @@ let scenery = null;
 
 const effects = new TyreEffects();
 const lights = new StartLights();
+// clouds drift over a bit more than the track itself so they don't pop in at the edges
+const atmosphere = new Atmosphere({
+  x: track.bounds.x - 600,
+  y: track.bounds.y - 600,
+  width: track.bounds.width + 1200,
+  height: track.bounds.height + 1200,
+});
 let car;
 let timer;
 
@@ -104,6 +112,7 @@ function update(dt) {
   car.update(controls, track, dt);
   if (lights.racing) timer.update(car, dt);
   effects.update(car, dt);
+  atmosphere.update(dt);
 }
 
 function draw() {
@@ -115,6 +124,8 @@ function draw() {
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
   lights.draw(ctx, track);
+  atmosphere.drawClouds(ctx);
+  atmosphere.drawVignette(ctx);
 
   const pixelRatio = window.devicePixelRatio || 1;
   drawHud(ctx, timer, car, pixelRatio);
