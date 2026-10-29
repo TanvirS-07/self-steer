@@ -47,12 +47,6 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
   if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
   if (e.code === 'KeyR' && !e.repeat) restart();
-
-const restartButton = document.getElementById('restart');
-restartButton.addEventListener('click', () => {
-  restart();
-  restartButton.blur(); // so Space/Enter don't press it again while driving
-});
 });
 
 // how the world maps onto the screen, worked out on resize
