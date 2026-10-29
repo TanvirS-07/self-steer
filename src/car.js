@@ -2,7 +2,7 @@ import { clamp } from './math.js';
 
 // Units are world pixels and seconds. Roughly 5px is a metre.
 const ENGINE = 290;        // acceleration at a standstill
-const TOP_SPEED = 420;
+export const TOP_SPEED = 420;
 const BRAKE = 480;         // more than the tyres can take, so slamming them on locks the wheels
 const REVERSE = 90;
 const GRIP = 500;          // most sideways acceleration the tyres can give
@@ -50,6 +50,8 @@ export class Car {
     this.steer = 0;
     this.brakePedal = 0;
     this.hitBarrier = false;
+    this.impact = 0;
+    this.contact = null;
     this.braking = false;
   }
 
@@ -195,6 +197,7 @@ export class Car {
     const limit = track.barrier - CAR_WIDTH / 2;
     const { index, distance } = track.nearest(this.x, this.y);
     this.hitBarrier = distance > limit;
+    this.impact = 0;
     if (!this.hitBarrier) return;
 
     const p = track.path[index];
@@ -203,7 +206,10 @@ export class Car {
     this.x = p.x + nx * limit;
     this.y = p.y + ny * limit;
 
+    // remember where and how hard it hit, for sparks and screen shake
     const intoWall = this.vx * nx + this.vy * ny;
+    this.impact = Math.max(0, intoWall);
+    this.contact = { x: p.x + nx * track.barrier, y: p.y + ny * track.barrier, nx, ny };
     if (intoWall > 0) {
       this.vx -= nx * intoWall * (1 + BARRIER_BOUNCE);
       this.vy -= ny * intoWall * (1 + BARRIER_BOUNCE);
