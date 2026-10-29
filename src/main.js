@@ -24,6 +24,7 @@ const effects = new TyreEffects();
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
+  if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
 });
 
 // how the world maps onto the screen, worked out on resize

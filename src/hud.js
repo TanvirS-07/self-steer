@@ -47,6 +47,7 @@ export function drawHud(ctx, timer, car, pixelRatio) {
     ['BEST', formatTime(timer.bestLap), '#b388ff'],
     ['KM/H', String(Math.round(car.speed * 0.6))],
     ['ABS · B', car.abs ? 'ON' : 'OFF', car.abs ? '#69f0ae' : '#ff8a80'],
+    ['TC · T', car.tractionControl ? 'ON' : 'OFF', car.tractionControl ? '#69f0ae' : '#ff8a80'],
   ];
 
   const width = sections.length * SECTION_WIDTH;
