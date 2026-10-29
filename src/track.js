@@ -15,10 +15,12 @@ const CONTROL_POINTS = [
 ];
 
 const SAMPLES_PER_SEGMENT = 20;
+const RUNOFF = 34; // grass between the edge of the road and the barrier
 
 export class Track {
   constructor(points = CONTROL_POINTS, width = 60) {
     this.width = width;
+    this.barrier = width / 2 + RUNOFF;
     this.controlPoints = points.map(([x, y]) => ({ x, y }));
     this.path = this.buildPath();
   }

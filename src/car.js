@@ -15,6 +15,8 @@ const OVERSTEER = 0.6;
 const MAX_OVERSTEER = 0.8; // rad/s, so a slide stays catchable
 const WHEELBASE = 14;
 const MAX_STEER = 0.55;    // radians the front wheels can turn
+const BARRIER_BOUNCE = 0.3;
+const BARRIER_FRICTION = 0.85;
 const STEER_SPEED = 5;     // how quickly the wheel turns from centre to full lock, per second
 
 // grass has much less grip and slows you down
@@ -41,6 +43,7 @@ export class Car {
     this.slip = 0;
     this.loadShift = 0;
     this.steer = 0;
+    this.hitBarrier = false;
   }
 
   get speed() {
@@ -53,6 +56,11 @@ export class Car {
   }
 
   update(controls, track, dt) {
+    this.drive(controls, track, dt);
+    this.keepInsideBarriers(track);
+  }
+
+  drive(controls, track, dt) {
     // Turn the wheel gradually towards where the driver wants it, instead of
     // snapping straight to full lock like a keyboard would
     const steerChange = clamp(controls.steer - this.steer, -STEER_SPEED * dt, STEER_SPEED * dt);
@@ -153,6 +161,28 @@ export class Car {
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+  }
+
+  // The barrier is a fixed distance from the centre line. If the car ends up past it,
+  // put it back on the barrier and bounce off whatever speed was heading into it.
+  keepInsideBarriers(track) {
+    const { index, distance } = track.nearest(this.x, this.y);
+    this.hitBarrier = distance > track.barrier;
+    if (!this.hitBarrier) return;
+
+    const p = track.path[index];
+    const nx = (this.x - p.x) / distance;
+    const ny = (this.y - p.y) / distance;
+    this.x = p.x + nx * track.barrier;
+    this.y = p.y + ny * track.barrier;
+
+    const intoWall = this.vx * nx + this.vy * ny;
+    if (intoWall > 0) {
+      this.vx -= nx * intoWall * (1 + BARRIER_BOUNCE);
+      this.vy -= ny * intoWall * (1 + BARRIER_BOUNCE);
+    }
+    this.vx *= BARRIER_FRICTION;
+    this.vy *= BARRIER_FRICTION;
   }
 
   // Moves weight towards the front under braking and the rear under power
