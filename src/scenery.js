@@ -22,11 +22,16 @@ const COLORS = {
 // always something to see at the edges, however wide or tall the screen is.
 const SCENE = { x: -800, y: -600, width: WORLD_WIDTH + 1600, height: WORLD_HEIGHT + 1200 };
 
+// Buildings round the start straight. Positions were picked to sit just behind the barriers.
+const GRANDSTAND = { x: 420, y: 630, w: 440, h: 42 };
+const PIT_BUILDING = { x: 380, y: 850, w: 500, h: 28 };
+const PADDOCK = { x: 380, y: 886, w: 500, h: 70 };
+
 // Areas kept clear of trees because something else is built there
-const CLEARINGS = [];
+const CLEARINGS = [GRANDSTAND, PIT_BUILDING, PADDOCK];
 
 function isBlocked(x, y) {
-  return CLEARINGS.some((r) => x > r.x - 12 && x < r.x + r.w + 12 && y > r.y - 12 && y < r.y + r.h + 12);
+  return CLEARINGS.some((r) => x > r.x - 20 && x < r.x + r.w + 20 && y > r.y - 20 && y < r.y + r.h + 20);
 }
 
 // The track and scenery never change, so we draw them once to an offscreen
@@ -48,6 +53,9 @@ export function renderScenery(track, area, scale) {
   drawBarriers(ctx, track, area, scale);
   drawStartLine(ctx, track);
   drawTyreStacks(ctx, track);
+  drawPaddock(ctx, random);
+  drawPitBuilding(ctx);
+  drawGrandstand(ctx, random);
   drawTrees(ctx, track, random);
 
   return canvas;
@@ -278,6 +286,109 @@ function drawBarriers(ctx, track, area, scale) {
   ctx.shadowOffsetY = 2;
   ctx.drawImage(layer, area.x, area.y, area.width, area.height);
   ctx.restore();
+
+  // posts holding the barrier up, skipped where the barrier from another
+  // part of the track is closer (inside tight corners)
+  ctx.fillStyle = '#4b4f55';
+  for (let i = 0; i < track.path.length; i += 2) {
+    const p = track.path[i];
+    for (const side of [-1, 1]) {
+      const x = p.x + p.normalX * side * (track.barrier + 1);
+      const y = p.y + p.normalY * side * (track.barrier + 1);
+      if (track.nearest(x, y).distance < track.barrier - 1) continue;
+      ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+    }
+  }
+}
+
+function drawShadow(ctx, rect, depth) {
+  ctx.fillStyle = 'rgba(20, 30, 15, 0.35)';
+  ctx.fillRect(rect.x + depth, rect.y + depth, rect.w, rect.h);
+}
+
+// Covered grandstand facing the start straight: roof at the back, crowd at the front
+function drawGrandstand(ctx, random) {
+  const g = GRANDSTAND;
+  drawShadow(ctx, g, 6);
+
+  // seating, with a dot for each person
+  ctx.fillStyle = '#8d9399';
+  ctx.fillRect(g.x, g.y, g.w, g.h);
+  const shirts = ['#e53935', '#1e88e5', '#fdd835', '#ffffff', '#43a047', '#fb8c00', '#212121', '#8e24aa'];
+  for (let row = g.y + 20; row < g.y + g.h - 3; row += 5) {
+    ctx.fillStyle = '#6d7379';
+    ctx.fillRect(g.x, row + 2.5, g.w, 1);
+    for (let x = g.x + 3; x < g.x + g.w - 3; x += 3.5) {
+      if (random() < 0.2) continue;
+      ctx.fillStyle = shirts[Math.floor(random() * shirts.length)];
+      ctx.fillRect(x, row, 2.5, 2.5);
+    }
+  }
+
+  // roof panels
+  ctx.fillStyle = '#e6e8ea';
+  ctx.fillRect(g.x - 4, g.y - 4, g.w + 8, 22);
+  ctx.fillStyle = '#c4c8cc';
+  for (let x = g.x; x < g.x + g.w; x += 20) {
+    ctx.fillRect(x, g.y - 4, 1.5, 22);
+  }
+  ctx.fillStyle = '#b0b5ba';
+  ctx.fillRect(g.x - 4, g.y + 16, g.w + 8, 2);
+}
+
+// Pit garages behind the barrier on the start straight
+function drawPitBuilding(ctx) {
+  const p = PIT_BUILDING;
+  drawShadow(ctx, p, 5);
+
+  ctx.fillStyle = '#3e4349';
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+  ctx.fillStyle = '#4c5258';
+  ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4);
+
+  // a red stripe of team awnings along the front
+  for (let x = p.x + 4; x < p.x + p.w - 20; x += 24) {
+    ctx.fillStyle = '#c62828';
+    ctx.fillRect(x, p.y + 2, 20, 5);
+  }
+
+  // air conditioning units on the roof
+  ctx.fillStyle = '#9ea4aa';
+  for (let x = p.x + 30; x < p.x + p.w - 20; x += 70) {
+    ctx.fillRect(x, p.y + 12, 10, 8);
+    ctx.fillStyle = '#7d838a';
+    ctx.beginPath();
+    ctx.arc(x + 5, p.y + 16, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9ea4aa';
+  }
+}
+
+// Concrete paddock behind the pits with team trucks parked in a row
+function drawPaddock(ctx, random) {
+  const p = PADDOCK;
+  ctx.fillStyle = '#a7a9a4';
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1;
+  for (let x = p.x; x < p.x + p.w; x += 30) {
+    ctx.beginPath();
+    ctx.moveTo(x, p.y);
+    ctx.lineTo(x, p.y + p.h);
+    ctx.stroke();
+  }
+
+  const liveries = ['#1e88e5', '#e53935', '#fdd835', '#43a047', '#ffffff', '#fb8c00'];
+  for (let x = p.x + 10; x < p.x + p.w - 20; x += 40) {
+    if (random() < 0.25) continue;
+    const truck = { x, y: p.y + 12, w: 16, h: 46 };
+    drawShadow(ctx, truck, 3);
+    ctx.fillStyle = '#f2f2f2';
+    ctx.fillRect(truck.x, truck.y + 10, truck.w, truck.h - 10);
+    ctx.fillStyle = liveries[Math.floor(random() * liveries.length)];
+    ctx.fillRect(truck.x, truck.y, truck.w, 9);
+    ctx.fillRect(truck.x + 6, truck.y + 12, 4, truck.h - 14);
+  }
 }
 
 // Stacks of tyres on the inside of the sharpest corners

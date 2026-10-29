@@ -31,11 +31,13 @@ export class Track {
     const xs = this.path.map((p) => p.x);
     const ys = this.path.map((p) => p.y);
     const pad = this.barrier + 20;
+    const hudSpace = 50; // keep the timing bar from covering the top of the track
+    const pitSpace = 30; // and leave room for the pit building below the start straight
     return {
       x: Math.min(...xs) - pad,
-      y: Math.min(...ys) - pad,
+      y: Math.min(...ys) - pad - hudSpace,
       width: Math.max(...xs) - Math.min(...xs) + pad * 2,
-      height: Math.max(...ys) - Math.min(...ys) + pad * 2,
+      height: Math.max(...ys) - Math.min(...ys) + pad * 2 + hudSpace + pitSpace,
     };
   }
 
