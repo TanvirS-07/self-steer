@@ -6,6 +6,7 @@ import { readKeyboard } from './input.js';
 import { LapTimer } from './laps.js';
 import { drawHud } from './hud.js';
 import { TyreEffects } from './effects.js';
+import { StartLights } from './startLights.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -14,11 +15,12 @@ const track = new Track();
 let scenery = null;
 
 const effects = new TyreEffects();
+const lights = new StartLights();
 let car;
 let timer;
 
-// Puts the car back on the grid and clears the timer and skid marks.
-// ABS and traction control settings carry over.
+// Puts the car back on the grid, clears the timer and skid marks and runs the
+// start lights again. ABS and traction control settings carry over.
 function restart() {
   const start = track.start;
   const previous = car;
@@ -33,6 +35,7 @@ function restart() {
   }
   timer = new LapTimer(track);
   effects.clear();
+  lights.reset();
 }
 
 restart();
@@ -89,8 +92,17 @@ function frame(now) {
 }
 
 function update(dt) {
-  car.update(readKeyboard(), track, dt);
-  timer.update(car, dt);
+  const controls = readKeyboard();
+  lights.update(controls, dt);
+
+  // sat on the grid until the lights go out, though you can still turn the wheel
+  if (!lights.racing) {
+    controls.throttle = 0;
+    controls.brake = 0;
+  }
+
+  car.update(controls, track, dt);
+  if (lights.racing) timer.update(car, dt);
   effects.update(car, dt);
 }
 
@@ -102,8 +114,11 @@ function draw() {
   effects.drawMarks(ctx);
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
+  lights.draw(ctx, track);
 
-  drawHud(ctx, timer, car, window.devicePixelRatio || 1);
+  const pixelRatio = window.devicePixelRatio || 1;
+  drawHud(ctx, timer, car, pixelRatio);
+  lights.drawMessage(ctx, pixelRatio);
 }
 
 requestAnimationFrame(frame);
