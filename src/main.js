@@ -1,6 +1,7 @@
 import { Track } from './track.js';
 import { renderScenery } from './scenery.js';
 import { Car } from './car.js';
+import { drawCar } from './carSprite.js';
 import { readKeyboard } from './input.js';
 import { LapTimer } from './laps.js';
 import { drawHud } from './hud.js';
@@ -76,7 +77,7 @@ function draw() {
 
   ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
   effects.drawMarks(ctx);
-  car.draw(ctx);
+  drawCar(ctx, car);
   effects.drawSmoke(ctx);
 
   drawHud(ctx, timer, car, window.devicePixelRatio || 1);

@@ -46,6 +46,7 @@ export class Car {
     this.loadShift = 0;
     this.steer = 0;
     this.hitBarrier = false;
+    this.braking = false;
   }
 
   get speed() {
@@ -87,6 +88,7 @@ export class Car {
     const braking = controls.brake > 0 && forward > 5;
     const frontBrake = controls.brake * BRAKE * BRAKE_BIAS;
     this.locked = braking && !this.abs && frontBrake > frontGrip;
+    this.braking = braking;
 
     if (this.locked) {
       this.skid(grip, surface, dt);
@@ -215,44 +217,4 @@ export class Car {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
   }
-
-  draw(ctx) {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
-
-    const l = CAR_LENGTH;
-    const w = CAR_WIDTH;
-
-    // shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    roundRect(ctx, -l / 2 + 2, -w / 2 + 2, l, w, 3);
-
-    // wheels
-    ctx.fillStyle = '#1b1b1b';
-    for (const wx of [-l / 2 + 2, l / 2 - 7]) {
-      ctx.fillRect(wx, -w / 2 - 1.5, 5, 3);
-      ctx.fillRect(wx, w / 2 - 1.5, 5, 3);
-    }
-
-    // body
-    ctx.fillStyle = this.color;
-    roundRect(ctx, -l / 2, -w / 2 + 1, l, w - 2, 3);
-
-    // stripe down the middle
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.fillRect(-l / 2, -1, l, 2);
-
-    // windscreen
-    ctx.fillStyle = '#263238';
-    roundRect(ctx, 0, -w / 2 + 2.5, 5, w - 5, 1.5);
-
-    ctx.restore();
-  }
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.fill();
 }
