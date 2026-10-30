@@ -8,6 +8,7 @@ import { drawHud } from './hud.js';
 import { TyreEffects } from './effects.js';
 import { StartLights } from './startLights.js';
 import { Atmosphere } from './atmosphere.js';
+import { Sensors } from './sensors.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -17,6 +18,8 @@ let scenery = null;
 
 const effects = new TyreEffects();
 const lights = new StartLights();
+const sensors = new Sensors();
+let showSensors = false;
 // clouds drift over a bit more than the track itself so they don't pop in at the edges
 const atmosphere = new Atmosphere({
   x: track.bounds.x - 600,
@@ -58,6 +61,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
   if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
   if (e.code === 'KeyR' && !e.repeat) restart();
+  if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
 });
 
 // how the world maps onto the screen, worked out on resize
@@ -110,6 +114,7 @@ function update(dt) {
   }
 
   car.update(controls, track, dt);
+  if (showSensors) sensors.read(car, track);
   if (lights.racing) timer.update(car, dt);
   effects.update(car, dt);
   atmosphere.update(dt);
@@ -125,6 +130,7 @@ function draw() {
   effects.drawMarks(ctx);
   effects.drawDust(ctx);
   effects.drawSpeedStreaks(ctx, car);
+  if (showSensors) sensors.draw(ctx, car);
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
   effects.drawSparks(ctx);
