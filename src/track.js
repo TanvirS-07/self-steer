@@ -16,6 +16,7 @@ const CONTROL_POINTS = [
 
 const SAMPLES_PER_SEGMENT = 20;
 const RUNOFF = 34; // grass between the edge of the road and the barrier
+const SEARCH_WINDOW = 25; // how many points either side of the last known one to check
 
 export class Track {
   constructor(points = CONTROL_POINTS, width = 60) {
@@ -81,16 +82,29 @@ export class Track {
   }
 
   // Finds the closest centre-line point. Returns its index and the distance to it.
-  nearest(x, y) {
+  // A car only moves a few points along the track each frame, so if we pass in
+  // where it was last time (hint) we only need to check the points around there.
+  // If that doesn't find anything close, fall back to checking the whole loop.
+  nearest(x, y, hint = null) {
+    if (hint !== null) {
+      const result = this.search(x, y, hint - SEARCH_WINDOW, hint + SEARCH_WINDOW);
+      if (result.distance < this.barrier + 20) return result;
+    }
+    return this.search(x, y, 0, this.path.length - 1);
+  }
+
+  search(x, y, from, to) {
+    const n = this.path.length;
     let best = Infinity;
     let index = 0;
-    for (let i = 0; i < this.path.length; i++) {
-      const dx = this.path[i].x - x;
-      const dy = this.path[i].y - y;
+    for (let i = from; i <= to; i++) {
+      const wrapped = ((i % n) + n) % n;
+      const dx = this.path[wrapped].x - x;
+      const dy = this.path[wrapped].y - y;
       const d = dx * dx + dy * dy;
       if (d < best) {
         best = d;
-        index = i;
+        index = wrapped;
       }
     }
     return { index, distance: Math.sqrt(best) };
