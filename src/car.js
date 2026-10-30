@@ -50,6 +50,7 @@ export class Car {
     this.steer = 0;
     this.brakePedal = 0;
     this.hitBarrier = false;
+    this.trackIndex = null; // nearest point on the centre line, updated every frame
     this.impact = 0;
     this.contact = null;
     this.braking = false;
@@ -69,6 +70,13 @@ export class Car {
     this.keepInsideBarriers(track);
   }
 
+  // Works out where on the track the car is, starting the search from last frame's spot
+  locate(track) {
+    const near = track.nearest(this.x, this.y, this.trackIndex);
+    this.trackIndex = near.index;
+    return near;
+  }
+
   drive(controls, track, dt) {
     // Turn the wheel gradually towards where the driver wants it, instead of
     // snapping straight to full lock like a keyboard would
@@ -84,7 +92,7 @@ export class Car {
       this.brakePedal = controls.brake;
     }
 
-    this.onRoad = track.isOnTrack(this.x, this.y);
+    this.onRoad = this.locate(track).distance <= track.width / 2;
     const surface = this.onRoad ? SURFACE.road : SURFACE.grass;
     const grip = GRIP * surface.grip;
 
@@ -195,7 +203,7 @@ export class Car {
   keepInsideBarriers(track) {
     // the side of the car hits the barrier, not its centre
     const limit = track.barrier - CAR_WIDTH / 2;
-    const { index, distance } = track.nearest(this.x, this.y);
+    const { index, distance } = this.locate(track);
     this.hitBarrier = distance > limit;
     this.impact = 0;
     if (!this.hitBarrier) return;
