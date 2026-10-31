@@ -32,6 +32,8 @@ Then open http://localhost:8000.
 | T | Toggle traction control |
 | R | Restart (replays the start lights) |
 | V | Show the distance sensors the AI will use |
+| I | Hand the car to the AI (untrained for now, so expect chaos) |
+| N | Give the AI a new random brain |
 
 ## How it's put together
 
@@ -39,6 +41,8 @@ Then open http://localhost:8000.
 - `src/scenery.js` - draws the grass, road, kerbs, trees, buildings and farmland once to an offscreen canvas sized to the screen
 - `src/car.js` - top-down car physics built around a tyre grip budget (see below)
 - `src/effects.js` - skid marks, tyre smoke, dust, barrier sparks, screen shake and speed streaks
+- `src/network.js` - a small neural network written from scratch
+- `src/driver.js` - feeds the sensors into the network and turns its outputs into controls
 - `src/sensors.js` - rays from the car that measure the distance to the barrier (the AI's eyes)
 - `src/startLights.js` - the five start lights and reaction timer
 - `src/atmosphere.js` - drifting cloud shadows and the vignette

@@ -9,6 +9,7 @@ import { TyreEffects } from './effects.js';
 import { StartLights } from './startLights.js';
 import { Atmosphere } from './atmosphere.js';
 import { Sensors } from './sensors.js';
+import { AIDriver } from './driver.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -20,6 +21,7 @@ const effects = new TyreEffects();
 const lights = new StartLights();
 const sensors = new Sensors();
 let showSensors = false;
+let aiDriver = null; // when set, a neural network drives instead of the keyboard
 // clouds drift over a bit more than the track itself so they don't pop in at the edges
 const atmosphere = new Atmosphere({
   x: track.bounds.x - 600,
@@ -62,6 +64,9 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
   if (e.code === 'KeyR' && !e.repeat) restart();
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
+  // I hands the car to an untrained network, N swaps in a new random one
+  if (e.code === 'KeyI' && !e.repeat) aiDriver = aiDriver ? null : new AIDriver();
+  if (e.code === 'KeyN' && !e.repeat && aiDriver) aiDriver = new AIDriver();
 });
 
 // how the world maps onto the screen, worked out on resize
@@ -104,7 +109,7 @@ function frame(now) {
 }
 
 function update(dt) {
-  const controls = readKeyboard();
+  const controls = aiDriver ? aiDriver.drive(car, track) : readKeyboard();
   lights.update(controls, dt);
 
   // sat on the grid until the lights go out, though you can still turn the wheel
@@ -114,7 +119,7 @@ function update(dt) {
   }
 
   car.update(controls, track, dt);
-  if (showSensors) sensors.read(car, track);
+  if (showSensors && !aiDriver) sensors.read(car, track);
   if (lights.racing) timer.update(car, dt);
   effects.update(car, dt);
   atmosphere.update(dt);
@@ -130,7 +135,8 @@ function draw() {
   effects.drawMarks(ctx);
   effects.drawDust(ctx);
   effects.drawSpeedStreaks(ctx, car);
-  if (showSensors) sensors.draw(ctx, car);
+  if (aiDriver) aiDriver.sensors.draw(ctx, car);
+  else if (showSensors) sensors.draw(ctx, car);
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
   effects.drawSparks(ctx);
@@ -139,7 +145,7 @@ function draw() {
   atmosphere.drawVignette(ctx);
 
   const pixelRatio = window.devicePixelRatio || 1;
-  drawHud(ctx, timer, car, pixelRatio);
+  drawHud(ctx, timer, car, pixelRatio, aiDriver ? 'AI' : 'YOU');
   lights.drawMessage(ctx, pixelRatio);
 }
 

@@ -35,12 +35,13 @@ function drawSection(ctx, x, label, value, valueColor = '#fff') {
 }
 
 // A single timing panel centred along the top of the screen
-export function drawHud(ctx, timer, car, pixelRatio) {
+export function drawHud(ctx, timer, car, pixelRatio, driver) {
   ctx.save();
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   const bestIsLast = timer.bestLap !== null && timer.bestLap === timer.lastLap;
   const sections = [
+    ['DRIVER · I', driver, driver === 'AI' ? '#ffd54f' : '#fff'],
     ['LAP', String(timer.lap)],
     ['TIME', formatTime(timer.lapTime)],
     ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
