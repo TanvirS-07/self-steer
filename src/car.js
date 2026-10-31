@@ -65,6 +65,11 @@ export class Car {
     return this.vx * Math.cos(this.angle) + this.vy * Math.sin(this.angle);
   }
 
+  // How fast it's sliding sideways, positive to the right
+  get sidewaysSpeed() {
+    return -this.vx * Math.sin(this.angle) + this.vy * Math.cos(this.angle);
+  }
+
   update(controls, track, dt) {
     this.drive(controls, track, dt);
     this.keepInsideBarriers(track);
