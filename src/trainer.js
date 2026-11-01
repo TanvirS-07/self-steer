@@ -10,6 +10,7 @@ const MUTATION_AMOUNT = 0.3;
 const TIME_LIMIT = 45;       // seconds per generation
 const STUCK_TIME = 3;        // seconds without real progress before a car is out
 const STUCK_PROGRESS = 8;    // path points it has to gain in that time
+const COLOURS = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#f06292', '#6d4c41', '#c0ca33'];
 
 // Runs a whole population of AI cars at once. When every car has crashed, got
 // stuck or run out of time, the best ones are bred into the next generation.
@@ -29,7 +30,7 @@ export class Trainer {
         s.x - s.dirX * 30,
         s.y - s.dirY * 30,
         Math.atan2(s.dirY, s.dirX),
-        `hsl(${(i * 137) % 360}, 70%, 50%)`,
+        COLOURS[i % COLOURS.length],
       );
       // no driver aids, so the AI has to learn not to lock the brakes or spin the wheels
       car.abs = false;
