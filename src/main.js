@@ -4,12 +4,13 @@ import { Car } from './car.js';
 import { drawCar } from './carSprite.js';
 import { readKeyboard } from './input.js';
 import { LapTimer } from './laps.js';
-import { drawHud } from './hud.js';
+import { drawHud, drawTrainingHud } from './hud.js';
 import { TyreEffects } from './effects.js';
 import { StartLights } from './startLights.js';
 import { Atmosphere } from './atmosphere.js';
 import { Sensors } from './sensors.js';
 import { AIDriver } from './driver.js';
+import { Trainer } from './trainer.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -22,6 +23,14 @@ const lights = new StartLights();
 const sensors = new Sensors();
 let showSensors = false;
 let aiDriver = null; // when set, a neural network drives instead of the keyboard
+
+// Training mode runs a whole population at once in fixed time steps, several
+// steps per frame when sped up, so results don't depend on the frame rate.
+const TRAINING_STEP = 1 / 60;
+const TRAINING_SPEEDS = [1, 3, 10];
+let trainer = null;
+let training = false;
+let trainingSpeed = 1;
 // clouds drift over a bit more than the track itself so they don't pop in at the edges
 const atmosphere = new Atmosphere({
   x: track.bounds.x - 600,
@@ -55,14 +64,27 @@ restart();
 
 const restartButton = document.getElementById('restart');
 restartButton.addEventListener('click', () => {
-  restart();
+  if (training) trainer = new Trainer(track);
+  else restart();
   restartButton.blur(); // so Space/Enter don't press it again while driving
 });
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' && !e.repeat) car.abs = !car.abs;
   if (e.code === 'KeyT' && !e.repeat) car.tractionControl = !car.tractionControl;
-  if (e.code === 'KeyR' && !e.repeat) restart();
+  if (e.code === 'KeyR' && !e.repeat) {
+    if (training) trainer = new Trainer(track);
+    else restart();
+  }
+  // G switches between racing and training, F changes how fast training runs
+  if (e.code === 'KeyG' && !e.repeat) {
+    if (!trainer) trainer = new Trainer(track);
+    training = !training;
+  }
+  if (e.code === 'KeyF' && !e.repeat && training) {
+    const next = (TRAINING_SPEEDS.indexOf(trainingSpeed) + 1) % TRAINING_SPEEDS.length;
+    trainingSpeed = TRAINING_SPEEDS[next];
+  }
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
   // I hands the car to an untrained network, N swaps in a new random one
   if (e.code === 'KeyI' && !e.repeat) aiDriver = aiDriver ? null : new AIDriver();
@@ -109,6 +131,12 @@ function frame(now) {
 }
 
 function update(dt) {
+  atmosphere.update(dt);
+  if (training) {
+    for (let i = 0; i < trainingSpeed; i++) trainer.update(TRAINING_STEP);
+    return;
+  }
+
   const controls = aiDriver ? aiDriver.drive(car, track) : readKeyboard();
   lights.update(controls, dt);
 
@@ -122,10 +150,36 @@ function update(dt) {
   if (showSensors && !aiDriver) sensors.read(car, track);
   if (lights.racing) timer.update(car, dt);
   effects.update(car, dt);
-  atmosphere.update(dt);
+}
+
+// While training: every car still in the running, with the leader drawn on top
+// in full and its sensors showing so you can see what it's reacting to
+function drawTraining() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(scenery, 0, 0);
+  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
+
+  const leader = trainer.leader;
+  ctx.globalAlpha = 0.6;
+  for (const r of trainer.racers) {
+    if (r.alive && r !== leader) drawCar(ctx, r.car);
+  }
+  ctx.globalAlpha = 1;
+  leader.driver.sensors.draw(ctx, leader.car);
+  drawCar(ctx, leader.car);
+
+  lights.draw(ctx, track);
+  atmosphere.drawClouds(ctx);
+  atmosphere.drawVignette(ctx);
+  drawTrainingHud(ctx, trainer, trainingSpeed, window.devicePixelRatio || 1);
 }
 
 function draw() {
+  if (training) {
+    drawTraining();
+    return;
+  }
+
   // the whole scene shakes on a big barrier hit, but the HUD stays put
   const shake = effects.shakeOffset();
   ctx.setTransform(1, 0, 0, 1, shake.x, shake.y);

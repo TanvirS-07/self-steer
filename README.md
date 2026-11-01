@@ -6,7 +6,7 @@ The plan is for a population of cars, each controlled by a small neural network,
 through neuroevolution. The best drivers from each generation get copied and mutated, and over time
 they figure out the racing line on their own.
 
-**Status:** early days. Right now there's the track and a car you can drive yourself. You can't
+**Status:** you can drive the car yourself, or press G to watch 50 AI cars teach themselves to drive. You can't
 just hold the throttle all the way round: brake too late and you'll run wide, brake too hard
 without ABS and the wheels lock.
 
@@ -34,6 +34,8 @@ Then open http://localhost:8000.
 | V | Show the distance sensors the AI will use |
 | I | Hand the car to the AI (untrained for now, so expect chaos) |
 | N | Give the AI a new random brain |
+| G | Switch to training mode: 50 AI cars learn by evolution |
+| F | Change training speed (1x, 3x, 10x) |
 
 ## How it's put together
 
@@ -43,6 +45,8 @@ Then open http://localhost:8000.
 - `src/effects.js` - skid marks, tyre smoke, dust, barrier sparks, screen shake and speed streaks
 - `src/network.js` - a small neural network written from scratch
 - `src/driver.js` - feeds the sensors into the network and turns its outputs into controls
+- `src/genetics.js` - crossover, mutation and tournament selection
+- `src/trainer.js` - runs a population of AI cars and breeds the best into the next generation
 - `src/sensors.js` - rays from the car that measure the distance to the barrier (the AI's eyes)
 - `src/startLights.js` - the five start lights and reaction timer
 - `src/atmosphere.js` - drifting cloud shadows and the vignette
