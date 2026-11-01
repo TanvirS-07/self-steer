@@ -34,25 +34,9 @@ function drawSection(ctx, x, label, value, valueColor = '#fff') {
   ctx.fillText(value, centre, 33);
 }
 
-// A single timing panel centred along the top of the screen
-export function drawHud(ctx, timer, car, pixelRatio, driver) {
-  ctx.save();
-  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-  const bestIsLast = timer.bestLap !== null && timer.bestLap === timer.lastLap;
-  const sections = [
-    ['DRIVER · I', driver, driver === 'AI' ? '#ffd54f' : '#fff'],
-    ['LAP', String(timer.lap)],
-    ['TIME', formatTime(timer.lapTime)],
-    ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
-    ['BEST', formatTime(timer.bestLap), '#b388ff'],
-    ['KM/H', String(Math.round(car.speed * 0.6))],
-    ['ABS · B', car.abs ? 'ON' : 'OFF', car.abs ? '#69f0ae' : '#ff8a80'],
-    ['TC · T', car.tractionControl ? 'ON' : 'OFF', car.tractionControl ? '#69f0ae' : '#ff8a80'],
-  ];
-
+// The dark panel centred along the top with a row of label/value sections
+function drawPanel(ctx, sections, screenWidth) {
   const width = sections.length * SECTION_WIDTH;
-  const screenWidth = ctx.canvas.width / pixelRatio;
   const left = Math.round((screenWidth - width) / 2);
 
   ctx.fillStyle = 'rgba(16, 20, 24, 0.82)';
@@ -71,6 +55,27 @@ export function drawHud(ctx, timer, car, pixelRatio, driver) {
     drawSection(ctx, x, label, value, color);
     ctx.restore();
   });
+}
+
+// What you see while racing: lap times, speed and driver aids
+export function drawHud(ctx, timer, car, pixelRatio, driver) {
+  ctx.save();
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+  const bestIsLast = timer.bestLap !== null && timer.bestLap === timer.lastLap;
+  const sections = [
+    ['DRIVER · I', driver, driver === 'AI' ? '#ffd54f' : '#fff'],
+    ['LAP', String(timer.lap)],
+    ['TIME', formatTime(timer.lapTime)],
+    ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
+    ['BEST', formatTime(timer.bestLap), '#b388ff'],
+    ['KM/H', String(Math.round(car.speed * 0.6))],
+    ['ABS · B', car.abs ? 'ON' : 'OFF', car.abs ? '#69f0ae' : '#ff8a80'],
+    ['TC · T', car.tractionControl ? 'ON' : 'OFF', car.tractionControl ? '#69f0ae' : '#ff8a80'],
+  ];
+
+  const screenWidth = ctx.canvas.width / pixelRatio;
+  drawPanel(ctx, sections, screenWidth);
 
   const warning = carWarning(car);
   if (warning) {
@@ -87,6 +92,30 @@ export function drawHud(ctx, timer, car, pixelRatio, driver) {
     ctx.textBaseline = 'middle';
     ctx.fillText(warning, x + pillWidth / 2, PANEL_HEIGHT + 24);
   }
+
+  ctx.restore();
+}
+
+// What you see while the AI is training: how evolution is getting on
+export function drawTrainingHud(ctx, trainer, speed, pixelRatio) {
+  ctx.save();
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+  const best = trainer.history.reduce(
+    (fastest, h) => (h.bestLap !== null && (fastest === null || h.bestLap < fastest) ? h.bestLap : fastest),
+    null,
+  );
+  const leader = trainer.leader;
+  const lapsDone = Math.max(0, leader.timer.progress / trainer.track.path.length);
+
+  drawPanel(ctx, [
+    ['MODE · G', 'TRAINING', '#ffd54f'],
+    ['GENERATION', String(trainer.generation)],
+    ['ALIVE', `${trainer.alive}/${trainer.racers.length}`],
+    ['LEADER', `${Math.round(lapsDone * 100)}%`],
+    ['BEST LAP', formatTime(best), '#b388ff'],
+    ['SPEED · F', `${speed}x`, speed > 1 ? '#69f0ae' : '#fff'],
+  ], ctx.canvas.width / pixelRatio);
 
   ctx.restore();
 }
