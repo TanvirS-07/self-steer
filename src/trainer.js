@@ -18,7 +18,8 @@ export class Trainer {
   constructor(track) {
     this.track = track;
     this.generation = 1;
-    this.history = []; // best fitness of each generation, for a chart later
+    this.history = []; // best fitness of each generation, for the chart
+    this.best = null;  // the best driver found in any generation so far
     this.start(Array.from({ length: POPULATION }, () => new AIDriver()));
   }
 
@@ -94,6 +95,16 @@ export class Trainer {
       average: ranked.reduce((sum, r) => sum + r.fitness, 0) / ranked.length,
       bestLap: ranked[0].timer.bestLap,
     });
+
+    // keep hold of the best brain ever seen, not just this generation's
+    if (!this.best || ranked[0].fitness > this.best.fitness) {
+      this.best = {
+        brain: ranked[0].driver.brain.copy(),
+        fitness: ranked[0].fitness,
+        bestLap: ranked[0].timer.bestLap,
+        generation: this.generation,
+      };
+    }
 
     const children = ranked.slice(0, ELITES).map((r) => new AIDriver(r.driver.brain.copy()));
     while (children.length < POPULATION) {
