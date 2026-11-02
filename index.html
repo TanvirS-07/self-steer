@@ -8,14 +8,18 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <button id="restart" type="button" title="Restart (R)">↺ Restart</button>
-  <aside id="controls" aria-label="Controls">
-    <h2>Controls <span>H to hide</span></h2>
+  <div id="buttons">
+    <button id="show-controls" type="button" aria-expanded="false" aria-controls="controls">Controls (H)</button>
+    <button id="restart" type="button" title="Restart (R)">↺ Restart</button>
+  </div>
+  <aside id="controls" aria-label="Controls" hidden>
+    <h2>Controls</h2>
     <dl>
       <dt>W A S D / arrows</dt><dd>Drive</dd>
       <dt>B</dt><dd>ABS on/off</dd>
       <dt>T</dt><dd>Traction control on/off</dd>
       <dt>R</dt><dd>Restart</dd>
+      <dt>C</dt><dd>Chase cam</dd>
       <dt>V</dt><dd>Show sensors</dd>
       <dt>I</dt><dd>Let the trained AI drive</dd>
       <dt>N</dt><dd>Try an untrained AI</dd>

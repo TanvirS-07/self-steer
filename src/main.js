@@ -82,6 +82,17 @@ function restart() {
 restart();
 
 const controlsLegend = document.getElementById('controls');
+const controlsButton = document.getElementById('show-controls');
+
+// the controls list stays tucked away under its button until asked for
+function toggleControls() {
+  controlsLegend.hidden = !controlsLegend.hidden;
+  controlsButton.setAttribute('aria-expanded', String(!controlsLegend.hidden));
+}
+controlsButton.addEventListener('click', () => {
+  toggleControls();
+  controlsButton.blur();
+});
 const restartButton = document.getElementById('restart');
 restartButton.addEventListener('click', () => {
   if (training) trainer = new Trainer(track);
@@ -106,7 +117,12 @@ window.addEventListener('keydown', (e) => {
     trainingSpeed = TRAINING_SPEEDS[next];
   }
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
-  if (e.code === 'KeyH' && !e.repeat) controlsLegend.hidden = !controlsLegend.hidden;
+  if (e.code === 'KeyC' && !e.repeat) {
+    chase = !chase;
+    if (chase) renderChaseScenery();
+    else chaseScenery = null; // it's big, so let it go when not needed
+  }
+  if (e.code === 'KeyH' && !e.repeat) toggleControls();
   // I hands the car to the best trained driver, N to a random untrained one
   if (e.code === 'KeyI' && !e.repeat) {
     const best = bestDriver();
@@ -121,6 +137,19 @@ window.addEventListener('keydown', (e) => {
 
 // how the world maps onto the screen, worked out on resize
 const view = { scale: 1, offsetX: 0, offsetY: 0 };
+
+// Chase cam: zoomed in and following one car. It needs its own sharper copy of
+// the scenery, which is only drawn while the chase cam is switched on.
+const CHASE_ZOOM = 2.2;
+let chase = false;
+let chaseScenery = null;
+const chaseCamera = { x: 0, y: 0, ease: 0 };
+
+function renderChaseScenery() {
+  const b = track.bounds;
+  const area = { x: b.x - 250, y: b.y - 250, width: b.width + 500, height: b.height + 500 };
+  chaseScenery = { area, image: renderScenery(track, area, view.scale * CHASE_ZOOM) };
+}
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -141,6 +170,7 @@ function resize() {
     height: canvas.height / view.scale,
   };
   scenery = renderScenery(track, visible, view.scale);
+  if (chase) renderChaseScenery();
 }
 
 window.addEventListener('resize', resize);
@@ -160,6 +190,7 @@ function frame(now) {
 
 function update(dt) {
   atmosphere.update(dt);
+  chaseCamera.ease = 1 - Math.exp(-8 * dt);
   if (training) {
     for (let i = 0; i < trainingSpeed; i++) trainer.update(TRAINING_STEP);
     // save a new best driver as soon as one turns up
@@ -187,12 +218,37 @@ function update(dt) {
 
 // While training: every car still in the running, with the leader drawn on top
 // in full and its sensors showing so you can see what it's reacting to
-function drawTraining() {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(scenery, 0, 0);
-  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
+// Draws the scenery and leaves the canvas set up for drawing in world units,
+// either showing the whole track or following `target` with the chase cam
+function drawBackground(target, shake = { x: 0, y: 0 }) {
+  if (!chase) {
+    ctx.setTransform(1, 0, 0, 1, shake.x, shake.y);
+    ctx.drawImage(scenery, 0, 0);
+    ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX + shake.x, view.offsetY + shake.y);
+    return;
+  }
 
+  // the camera eases towards the car rather than being glued to it, which feels smoother
+  chaseCamera.x += (target.x - chaseCamera.x) * chaseCamera.ease;
+  chaseCamera.y += (target.y - chaseCamera.y) * chaseCamera.ease;
+
+  const scale = view.scale * CHASE_ZOOM;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#74a845';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(
+    scale, 0, 0, scale,
+    canvas.width / 2 - chaseCamera.x * scale + shake.x,
+    canvas.height / 2 - chaseCamera.y * scale + shake.y,
+  );
+  const { image, area } = chaseScenery;
+  ctx.drawImage(image, area.x, area.y, area.width, area.height);
+}
+
+function drawTraining() {
   const leader = trainer.leader;
+  drawBackground(leader.car);
+
   ctx.globalAlpha = 0.6;
   for (const r of trainer.racers) {
     if (r.alive && r !== leader) drawCar(ctx, r.car);
@@ -214,11 +270,7 @@ function draw() {
   }
 
   // the whole scene shakes on a big barrier hit, but the HUD stays put
-  const shake = effects.shakeOffset();
-  ctx.setTransform(1, 0, 0, 1, shake.x, shake.y);
-  ctx.drawImage(scenery, 0, 0);
-
-  ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX + shake.x, view.offsetY + shake.y);
+  drawBackground(car, effects.shakeOffset());
   effects.drawMarks(ctx);
   effects.drawDust(ctx);
   effects.drawSpeedStreaks(ctx, car);

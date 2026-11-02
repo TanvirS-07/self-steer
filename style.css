@@ -16,10 +16,15 @@ canvas {
   height: 100%;
 }
 
-#restart {
+#buttons {
   position: fixed;
   top: 12px;
   right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+#buttons button {
   padding: 10px 16px;
   border: none;
   border-radius: 10px;
@@ -30,19 +35,19 @@ canvas {
   cursor: pointer;
 }
 
-#restart:hover {
+#buttons button:hover {
   background: rgba(40, 48, 56, 0.9);
 }
 
-#restart:focus-visible {
+#buttons button:focus-visible {
   outline: 2px solid #69f0ae;
   outline-offset: 2px;
 }
 
 #controls {
   position: fixed;
-  left: 12px;
-  bottom: 12px;
+  top: 56px;
+  right: 12px;
   padding: 12px 14px;
   border-radius: 10px;
   background: rgba(16, 20, 24, 0.82);
@@ -57,13 +62,6 @@ canvas {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
-}
-
-#controls h2 span {
-  margin-left: 6px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 #controls dl {
