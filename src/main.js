@@ -81,6 +81,7 @@ function restart() {
 
 restart();
 
+const controlsLegend = document.getElementById('controls');
 const restartButton = document.getElementById('restart');
 restartButton.addEventListener('click', () => {
   if (training) trainer = new Trainer(track);
@@ -105,6 +106,7 @@ window.addEventListener('keydown', (e) => {
     trainingSpeed = TRAINING_SPEEDS[next];
   }
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
+  if (e.code === 'KeyH' && !e.repeat) controlsLegend.hidden = !controlsLegend.hidden;
   // I hands the car to the best trained driver, N to a random untrained one
   if (e.code === 'KeyI' && !e.repeat) {
     const best = bestDriver();
