@@ -12,6 +12,7 @@ import { Sensors } from './sensors.js';
 import { AIDriver } from './driver.js';
 import { Trainer } from './trainer.js';
 import { loadProBrain, loadSavedBrain, saveBrain } from './brains.js';
+import { drawFitnessChart, drawBrain } from './panels.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -245,6 +246,23 @@ function drawBackground(target, shake = { x: 0, y: 0 }) {
   ctx.drawImage(image, area.x, area.y, area.width, area.height);
 }
 
+// The chart and brain sit in the top-left corner, which is only ever forest
+const CHART_RECT = { x: 12, y: 12, w: 250, h: 140 };
+const BRAIN_RECT = { x: 12, y: 160, w: 250, h: 170 };
+
+function drawPanels(network, history = null) {
+  ctx.save();
+  const pixelRatio = window.devicePixelRatio || 1;
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  if (history) {
+    drawFitnessChart(ctx, history, CHART_RECT);
+    drawBrain(ctx, network, BRAIN_RECT);
+  } else {
+    drawBrain(ctx, network, { ...BRAIN_RECT, y: CHART_RECT.y });
+  }
+  ctx.restore();
+}
+
 function drawTraining() {
   const leader = trainer.leader;
   drawBackground(leader.car);
@@ -261,6 +279,7 @@ function drawTraining() {
   atmosphere.drawClouds(ctx);
   atmosphere.drawVignette(ctx);
   drawTrainingHud(ctx, trainer, trainingSpeed, window.devicePixelRatio || 1);
+  drawPanels(leader.driver.brain, trainer.history);
 }
 
 function draw() {
@@ -285,6 +304,7 @@ function draw() {
 
   const pixelRatio = window.devicePixelRatio || 1;
   drawHud(ctx, timer, car, pixelRatio, driverName);
+  if (aiDriver) drawPanels(aiDriver.brain);
   lights.drawMessage(ctx, pixelRatio);
 }
 
