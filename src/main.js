@@ -61,16 +61,27 @@ const atmosphere = new Atmosphere({
 let car;
 let timer;
 
+// Race mode: the best trained AI lines up on pole and you start just behind it.
+// The cars are ghosts to each other, so it's a pure race against the clock.
+let racingRival = false;
+let rival = null;
+
 // Puts the car back on the grid, clears the timer and skid marks and runs the
 // start lights again. ABS and traction control settings carry over.
-function restart() {
-  const start = track.start;
-  const previous = car;
-  car = new Car(
-    start.x - start.dirX * 30,
-    start.y - start.dirY * 30,
-    Math.atan2(start.dirY, start.dirX),
+// A spot on the starting grid: how far back from the line and how far across
+function gridSlot(back, across, color) {
+  const s = track.start;
+  return new Car(
+    s.x - s.dirX * back + s.normalX * across,
+    s.y - s.dirY * back + s.normalY * across,
+    Math.atan2(s.dirY, s.dirX),
+    color,
   );
+}
+
+function restart() {
+  const previous = car;
+  car = racingRival ? gridSlot(46, 15) : gridSlot(30, 0);
   if (previous) {
     car.abs = previous.abs;
     car.tractionControl = previous.tractionControl;
@@ -78,6 +89,12 @@ function restart() {
   timer = new LapTimer(track);
   effects.clear();
   lights.reset();
+
+  rival = null;
+  const best = bestDriver();
+  if (racingRival && best) {
+    rival = { car: gridSlot(24, -15, '#e53935'), driver: new AIDriver(best.brain.copy()), timer: new LapTimer(track) };
+  }
 }
 
 restart();
@@ -118,6 +135,10 @@ window.addEventListener('keydown', (e) => {
     trainingSpeed = TRAINING_SPEEDS[next];
   }
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
+  if (e.code === 'KeyP' && !e.repeat && !training) {
+    racingRival = !racingRival;
+    restart();
+  }
   if (e.code === 'KeyC' && !e.repeat) {
     chase = !chase;
     if (chase) renderChaseScenery();
@@ -214,6 +235,16 @@ function update(dt) {
   car.update(controls, track, dt);
   if (showSensors && !aiDriver) sensors.read(car, track);
   if (lights.racing) timer.update(car, dt);
+
+  if (rival) {
+    const rivalControls = rival.driver.drive(rival.car, track);
+    if (!lights.racing) {
+      rivalControls.throttle = 0;
+      rivalControls.brake = 0;
+    }
+    rival.car.update(rivalControls, track, dt);
+    if (lights.racing) rival.timer.update(rival.car, dt);
+  }
   effects.update(car, dt);
 }
 
@@ -295,6 +326,7 @@ function draw() {
   effects.drawSpeedStreaks(ctx, car);
   if (aiDriver) aiDriver.sensors.draw(ctx, car);
   else if (showSensors) sensors.draw(ctx, car);
+  if (rival) drawCar(ctx, rival.car);
   drawCar(ctx, car);
   effects.drawSmoke(ctx);
   effects.drawSparks(ctx);
@@ -303,7 +335,7 @@ function draw() {
   atmosphere.drawVignette(ctx);
 
   const pixelRatio = window.devicePixelRatio || 1;
-  drawHud(ctx, timer, car, pixelRatio, driverName);
+  drawHud(ctx, timer, car, pixelRatio, driverName, rival?.timer);
   if (aiDriver) drawPanels(aiDriver.brain);
   lights.drawMessage(ctx, pixelRatio);
 }

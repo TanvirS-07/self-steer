@@ -10,6 +10,12 @@ function formatTime(seconds) {
   return mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : secs;
 }
 
+// Whoever has covered more of the track is in front
+function position(timer, rivalTimer) {
+  const ahead = timer.progress >= rivalTimer.progress;
+  return ['VS AI · P', ahead ? '1ST' : '2ND', ahead ? '#69f0ae' : '#ff8a80'];
+}
+
 function carWarning(car) {
   if (car.locked) return 'WHEELS LOCKED';
   if (car.wheelspin) return 'WHEELSPIN';
@@ -58,7 +64,8 @@ function drawPanel(ctx, sections, screenWidth) {
 }
 
 // What you see while racing: lap times, speed and driver aids
-export function drawHud(ctx, timer, car, pixelRatio, driver) {
+// rivalTimer is only passed in when racing the AI
+export function drawHud(ctx, timer, car, pixelRatio, driver, rivalTimer = null) {
   ctx.save();
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
@@ -67,7 +74,9 @@ export function drawHud(ctx, timer, car, pixelRatio, driver) {
     ['DRIVER · I', driver, driver === 'YOU' ? '#fff' : '#ffd54f'],
     ['LAP', String(timer.lap)],
     ['TIME', formatTime(timer.lapTime)],
-    ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
+    rivalTimer
+      ? position(timer, rivalTimer)
+      : ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],
     ['BEST', formatTime(timer.bestLap), '#b388ff'],
     ['KM/H', String(Math.round(car.speed * 0.6))],
     ['ABS · B', car.abs ? 'ON' : 'OFF', car.abs ? '#69f0ae' : '#ff8a80'],
