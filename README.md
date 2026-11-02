@@ -32,8 +32,11 @@ Then open http://localhost:8000.
 | T | Toggle traction control |
 | R | Restart (replays the start lights) |
 | V | Show the distance sensors the AI will use |
-| I | Hand the car to the AI (untrained for now, so expect chaos) |
-| N | Give the AI a new random brain |
+| I | Hand the car to the best trained AI |
+| N | Hand the car to an untrained AI, to see where it starts from |
+| P | Race against the best trained AI |
+| C | Chase cam |
+| H | Show or hide the controls |
 | G | Switch to training mode: 50 AI cars learn by evolution |
 | F | Change training speed (1x, 3x, 10x) |
 
@@ -47,6 +50,10 @@ Then open http://localhost:8000.
 - `src/driver.js` - feeds the sensors into the network and turns its outputs into controls
 - `src/genetics.js` - crossover, mutation and tournament selection
 - `src/trainer.js` - runs a population of AI cars and breeds the best into the next generation
+- `src/brains.js` - loads the pre-trained driver and saves the best one you train in the browser
+- `src/panels.js` - the fitness chart and the live view of the network
+- `tools/train.mjs` - trains a driver in Node without the browser
+- `models/pro.json` - the pre-trained driver that ships with the game
 - `src/sensors.js` - rays from the car that measure the distance to the barrier (the AI's eyes)
 - `src/startLights.js` - the five start lights and reaction timer
 - `src/atmosphere.js` - drifting cloud shadows and the vignette
@@ -74,3 +81,17 @@ The car is simple but tries to behave like a real one:
   sideways (a friction ellipse), which keeps braking distances believable.
 - **Barriers.** A barrier runs round the whole circuit a fixed distance from the centre line.
   Hit it and you bounce off and lose most of your speed.
+
+## Training your own driver
+
+Press G in the game to watch 50 cars evolve, and F to speed it up. The best driver found is
+saved in your browser, and I or P will use it if it's faster than the one that ships with the game.
+
+You can also train without the browser, which is much faster:
+
+```bash
+node tools/train.mjs 120 models/pro.json
+```
+
+The included `models/pro.json` was made this way: 120 generations, about three minutes, and it
+laps in around 18.3 seconds.
