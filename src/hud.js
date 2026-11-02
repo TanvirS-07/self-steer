@@ -64,7 +64,7 @@ export function drawHud(ctx, timer, car, pixelRatio, driver) {
 
   const bestIsLast = timer.bestLap !== null && timer.bestLap === timer.lastLap;
   const sections = [
-    ['DRIVER · I', driver, driver === 'AI' ? '#ffd54f' : '#fff'],
+    ['DRIVER · I', driver, driver === 'YOU' ? '#fff' : '#ffd54f'],
     ['LAP', String(timer.lap)],
     ['TIME', formatTime(timer.lapTime)],
     ['LAST', formatTime(timer.lastLap), bestIsLast ? '#b388ff' : '#fff'],

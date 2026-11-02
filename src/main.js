@@ -11,6 +11,7 @@ import { Atmosphere } from './atmosphere.js';
 import { Sensors } from './sensors.js';
 import { AIDriver } from './driver.js';
 import { Trainer } from './trainer.js';
+import { loadProBrain, loadSavedBrain, saveBrain } from './brains.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -23,6 +24,24 @@ const lights = new StartLights();
 const sensors = new Sensors();
 let showSensors = false;
 let aiDriver = null; // when set, a neural network drives instead of the keyboard
+let driverName = 'YOU';
+
+// The pre-trained driver loads in the background; until then I falls back to the others
+let proDriver = null;
+loadProBrain().then((pro) => (proDriver = pro));
+let savedBest = null;
+
+// Picks the fastest driver available: the one that ships with the game, the best
+// one you've trained before (saved in the browser), or one from this session
+function bestDriver() {
+  const options = [
+    proDriver && { ...proDriver, name: 'PRO' },
+    loadSavedBrain() && { ...loadSavedBrain(), name: 'YOURS' },
+    trainer?.best && { ...trainer.best, name: 'YOURS' },
+  ].filter((d) => d && d.bestLap !== null);
+  options.sort((a, b) => a.bestLap - b.bestLap);
+  return options[0] ?? null;
+}
 
 // Training mode runs a whole population at once in fixed time steps, several
 // steps per frame when sped up, so results don't depend on the frame rate.
@@ -86,9 +105,16 @@ window.addEventListener('keydown', (e) => {
     trainingSpeed = TRAINING_SPEEDS[next];
   }
   if (e.code === 'KeyV' && !e.repeat) showSensors = !showSensors;
-  // I hands the car to an untrained network, N swaps in a new random one
-  if (e.code === 'KeyI' && !e.repeat) aiDriver = aiDriver ? null : new AIDriver();
-  if (e.code === 'KeyN' && !e.repeat && aiDriver) aiDriver = new AIDriver();
+  // I hands the car to the best trained driver, N to a random untrained one
+  if (e.code === 'KeyI' && !e.repeat) {
+    const best = bestDriver();
+    aiDriver = aiDriver ? null : new AIDriver(best ? best.brain.copy() : null);
+    driverName = aiDriver ? (best ? best.name : 'RANDOM') : 'YOU';
+  }
+  if (e.code === 'KeyN' && !e.repeat) {
+    aiDriver = new AIDriver();
+    driverName = 'RANDOM';
+  }
 });
 
 // how the world maps onto the screen, worked out on resize
@@ -134,6 +160,11 @@ function update(dt) {
   atmosphere.update(dt);
   if (training) {
     for (let i = 0; i < trainingSpeed; i++) trainer.update(TRAINING_STEP);
+    // save a new best driver as soon as one turns up
+    if (trainer.best && trainer.best !== savedBest) {
+      savedBest = trainer.best;
+      if (savedBest.bestLap !== null) saveBrain(savedBest);
+    }
     return;
   }
 
@@ -199,7 +230,7 @@ function draw() {
   atmosphere.drawVignette(ctx);
 
   const pixelRatio = window.devicePixelRatio || 1;
-  drawHud(ctx, timer, car, pixelRatio, aiDriver ? 'AI' : 'YOU');
+  drawHud(ctx, timer, car, pixelRatio, driverName);
   lights.drawMessage(ctx, pixelRatio);
 }
 
