@@ -1,14 +1,13 @@
 # Self Steer
 
-A top-down 2D racing game where cars teach themselves to drive.
+A top-down racing game where cars teach themselves to drive.
 
-The plan is for a population of cars, each controlled by a small neural network, to learn the track
-through neuroevolution. The best drivers from each generation get copied and mutated, and over time
-they figure out the racing line on their own.
+![The pre-trained AI driving, with its sensors and live network view](docs/screenshot.jpg)
 
-**Status:** you can drive the car yourself, or press G to watch 50 AI cars teach themselves to drive. You can't
-just hold the throttle all the way round: brake too late and you'll run wide, brake too hard
-without ABS and the wheels lock.
+You can drive the car yourself, hand it to an AI, race against the AI, or watch 50 AI cars learn
+the circuit from scratch. Each AI car is controlled by a small neural network, and the networks
+are improved by a genetic algorithm: the drivers that get furthest are bred together, mutated a
+little, and raced again. Everything is plain JavaScript with no libraries, including the network.
 
 ## Running it
 
@@ -31,67 +30,91 @@ Then open http://localhost:8000.
 | B | Toggle ABS |
 | T | Toggle traction control |
 | R | Restart (replays the start lights) |
-| V | Show the distance sensors the AI will use |
 | I | Hand the car to the best trained AI |
 | N | Hand the car to an untrained AI, to see where it starts from |
 | P | Race against the best trained AI |
-| C | Chase cam |
-| H | Show or hide the controls |
-| G | Switch to training mode: 50 AI cars learn by evolution |
+| G | Training mode: watch 50 AI cars evolve |
 | F | Change training speed (1x, 3x, 10x) |
+| C | Chase cam |
+| V | Show the distance sensors |
+| H | Show or hide the controls |
 
-## How it's put together
+## How it works
 
-- `src/track.js` - the circuit is a loop of hand-placed points smoothed with a Catmull-Rom spline
-- `src/scenery.js` - draws the grass, road, kerbs, trees, buildings and farmland once to an offscreen canvas sized to the screen
-- `src/car.js` - top-down car physics built around a tyre grip budget (see below)
-- `src/effects.js` - skid marks, tyre smoke, dust, barrier sparks, screen shake and speed streaks
-- `src/network.js` - a small neural network written from scratch
-- `src/driver.js` - feeds the sensors into the network and turns its outputs into controls
-- `src/genetics.js` - crossover, mutation and tournament selection
-- `src/trainer.js` - runs a population of AI cars and breeds the best into the next generation
-- `src/brains.js` - loads the pre-trained driver and saves the best one you train in the browser
-- `src/panels.js` - the fitness chart and the live view of the network
-- `tools/train.mjs` - trains a driver in Node without the browser
-- `models/pro.json` - the pre-trained driver that ships with the game
-- `src/sensors.js` - rays from the car that measure the distance to the barrier (the AI's eyes)
-- `src/startLights.js` - the five start lights and reaction timer
-- `src/atmosphere.js` - drifting cloud shadows and the vignette
-- `src/laps.js` - lap counting and timing
-- `src/carSprite.js` - draws the car, kept separate from the physics in `src/car.js`
-- `src/hud.js` - the timing panel across the top
+**The track** is 26 hand-placed points smoothed into a loop with a Catmull-Rom spline and sampled
+into evenly spaced points along the centre line. Almost everything is worked out from the distance
+to that centre line: whether you're on the road, where the barriers are, what the sensors see and
+how far round the lap you are. Finding the nearest point only searches near where the car was last
+frame, which is about 7x faster than checking the whole loop.
 
-## Car physics
+**The car** has a simple but believable physics model. The tyres have a grip budget that braking,
+accelerating and cornering all share, split between the axles by weight transfer. Ask for more than
+the front tyres have and the car understeers; run out at the rear and it oversteers. Braking harder
+than the tyres can take locks the wheels so you can't steer, unless ABS is on. Too much throttle
+spins the rear wheels, unless traction control is on. The car hits steel barriers rather than
+driving off into the countryside.
 
-The car is simple but tries to behave like a real one:
+**The AI** sees the track through nine rays that measure the distance to the barrier, plus its own
+speed and how much it's sliding. Those 11 numbers go into a neural network (11 → 10 → 2, tanh
+activations), which outputs a steering value and a single pedal: positive for throttle, negative
+for brake. The rays use sphere tracing, so each one only needs about ten distance checks.
 
-- **Friction circle.** Each tyre can only produce so much grip. Grip used for braking or
-  accelerating isn't available for turning, so braking mid-corner makes the car run wide.
-- **Cornering limit.** Turning at speed `v` needs `v × turn rate` of sideways grip. Ask for more
-  than the front tyres have and the car understeers; if the rears run out it oversteers.
-- **Weight transfer.** Braking shifts load onto the front tyres and accelerating shifts it to
-  the rear, which changes how much grip each end has.
-- **Wheel lock and ABS.** The brakes are stronger than the tyres. Without ABS, braking hard locks
-  the fronts and the car slides straight on with no steering. ABS holds the brakes just below
-  the locking point.
-- **Wheelspin and traction control.** It's rear wheel drive, so with traction control off,
-  flooring it at low speed spins the rears and steps the back out.
-- **Brake pressure.** The brakes build up over a quarter of a second, so a quick tap scrubs off
-  a little speed rather than stopping the car dead. The tyres also grip less front-to-back than
-  sideways (a friction ellipse), which keeps braking distances believable.
-- **Barriers.** A barrier runs round the whole circuit a fixed distance from the centre line.
-  Hit it and you bounce off and lose most of your speed.
+**Evolution** races 50 cars at once with ABS and traction control off, so they have to learn car
+control themselves. A car is out if it hits a barrier, goes backwards or stalls. Its fitness is how
+far round the track it got, plus a bonus for fast laps once it can complete one. The top two brains
+carry over unchanged, and the rest are bred from tournament-selected parents using uniform crossover
+and Gaussian mutation. The first lap usually appears around generation 18, and by about generation
+70 it laps as fast as a hand-written driver.
 
 ## Training your own driver
 
-Press G in the game to watch 50 cars evolve, and F to speed it up. The best driver found is
-saved in your browser, and I or P will use it if it's faster than the one that ships with the game.
+Press G in the game to watch the cars evolve, and F to speed it up. The best driver found is saved
+in your browser, and I or P will use it if it's faster than the one that ships with the game.
 
-You can also train without the browser, which is much faster:
+Training is much faster without the browser:
 
 ```bash
-node tools/train.mjs 120 models/pro.json
+npm run train -- 120 models/pro.json
 ```
 
-The included `models/pro.json` was made this way: 120 generations, about three minutes, and it
+The included `models/pro.json` was made this way: 120 generations in about three minutes, and it
 laps in around 18.3 seconds.
+
+## Tests
+
+```bash
+npm test
+```
+
+The tests use Node's built-in test runner. They cover the maths helpers, the neural network, the
+genetic operators, lap counting, the car physics (including ABS and the barriers), and check that
+the pre-trained driver can still get round a lap cleanly. They run on every push with GitHub Actions.
+
+## Project layout
+
+- `src/main.js` - game loop, controls and modes; wires everything else together
+- `src/track.js` - the circuit: spline, centre-line points, nearest point and barrier distance
+- `src/car.js` - car physics
+- `src/input.js` - turns keys into throttle, brake and steering
+- `src/laps.js` - progress round the track and lap timing
+- `src/sensors.js` - rays that measure the distance to the barrier
+- `src/network.js` - the neural network
+- `src/driver.js` - feeds the sensors into the network and turns its outputs into controls
+- `src/genetics.js` - crossover, mutation and tournament selection
+- `src/trainer.js` - runs a population of AI cars and breeds the next generation
+- `src/brains.js` - loads the pre-trained driver and saves the best one you train
+- `src/scenery.js`, `src/carSprite.js`, `src/effects.js`, `src/atmosphere.js`, `src/startLights.js`,
+  `src/hud.js`, `src/panels.js` - everything you see: scenery, cars, effects, start lights, HUD,
+  the fitness chart and the live network view
+- `tools/train.mjs` - trains a driver in Node without the browser
+- `models/pro.json` - the pre-trained driver
+- `tests/` - unit tests
+
+The simulation code never touches the canvas, which is what lets the same physics and AI run in
+the browser, in the tests and in the training script.
+
+## Things it doesn't do (yet)
+
+- The physics is an arcade model, not a full simulation: no tyre slip curves or yaw inertia.
+- The AI is trained on one circuit, so it may not cope as well with a different layout.
+- Cars don't collide with each other.
