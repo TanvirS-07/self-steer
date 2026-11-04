@@ -14,9 +14,31 @@ const TECHNICAL = [
   [400, 150], [220, 250], [180, 450], [300, 550], [180, 650],
 ];
 
+// Two extra practice circuits with very sharp corners, as tight as the technical
+// test track's, but laid out nothing like it
+const CHEVRONS = [
+  [250, 760], [1350, 760], [1450, 600], [1300, 500], [1450, 400], [1350, 250], [1000, 330],
+  [800, 150], [600, 330], [300, 180], [180, 400], [350, 550], [180, 650],
+];
+
+const SWITCHBACK = [
+  [250, 780], [800, 790], [1350, 770], [1470, 660], [1380, 560], [1150, 540], [980, 450],
+  [1150, 360], [1380, 340], [1470, 240], [1350, 130], [800, 110], [250, 130], [150, 250],
+  [260, 360], [500, 380], [680, 470], [500, 560], [260, 580], [150, 680],
+];
+
 export const TRAINING_TRACKS = {
   main: MAIN_TRACK,
   'main, reversed': [...MAIN_TRACK].reverse(),
+};
+
+// The main circuit plus the sharp-cornered practice circuits, all both ways round
+export const VARIED_TRAINING_TRACKS = {
+  ...TRAINING_TRACKS,
+  chevrons: CHEVRONS,
+  'chevrons, reversed': [...CHEVRONS].reverse(),
+  switchback: SWITCHBACK,
+  'switchback, reversed': [...SWITCHBACK].reverse(),
 };
 
 export const TEST_TRACKS = {
