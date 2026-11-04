@@ -10,6 +10,7 @@ const MUTATION_AMOUNT = 0.3;
 const TIME_LIMIT = 45;       // seconds per generation
 const STUCK_TIME = 3;        // seconds without real progress before a car is out
 const STUCK_PROGRESS = 8;    // path points it has to gain in that time
+const RESTART_AFTER = 40;    // generations without a single lap before starting again from scratch
 const COLOURS = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#f06292', '#6d4c41', '#c0ca33'];
 
 // Runs a whole population of AI cars at once. When every car has crashed, got
@@ -25,6 +26,8 @@ export class Trainer {
     this.generation = 1;
     this.history = []; // best fitness of each generation, for the chart
     this.best = null;  // the best driver found in any generation so far
+    this.restarts = 0;
+    this.lastRestart = 0; // generation when the population was last started from scratch
     this.start(Array.from({ length: POPULATION }, () => new AIDriver()));
   }
 
@@ -86,9 +89,12 @@ export class Trainer {
 
   // Fitness is mostly how far round the track a car got. Finishing laps quickly
   // earns a bonus on top, so once they can get round, faster ones win.
+  // Tracks have different numbers of points per lap, so progress is scaled to
+  // make a lap of any track worth the same as a lap of the first one.
   score(r) {
     const lapBonus = r.timer.bestLap === null ? 0 : (60 - r.timer.bestLap) * 20;
-    return r.timer.progress + lapBonus;
+    const scale = this.track.path.length / r.track.path.length;
+    return r.timer.progress * scale + lapBonus;
   }
 
   isStuck(r) {
@@ -126,6 +132,18 @@ export class Trainer {
         bestLap: ranked[0].bestLap,
         generation: this.generation,
       };
+    }
+
+    // Sometimes the whole population settles on a dead end and nothing ever
+    // completes a lap. If that's gone on too long, throw them away and start
+    // again with fresh random brains instead of waiting forever.
+    const lapSinceRestart = this.history.slice(this.lastRestart).some((h) => h.bestLap !== null);
+    if (!lapSinceRestart && this.generation - this.lastRestart >= RESTART_AFTER) {
+      this.restarts++;
+      this.lastRestart = this.generation;
+      this.generation++;
+      this.start(Array.from({ length: POPULATION }, () => new AIDriver()));
+      return;
     }
 
     const children = ranked.slice(0, ELITES).map((r) => new AIDriver(r.driver.brain.copy()));
