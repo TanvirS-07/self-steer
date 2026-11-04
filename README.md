@@ -112,10 +112,13 @@ It can still overfit to the kind of corners it practised on, and it did:
   corners turn the same way. It beat the hand-written driver on the mirrored circuit and on the
   kidney, but driving the training circuit the other way round it couldn't get past a tight
   hairpin in its weaker direction. It had learned to turn one way better than the other.
-- **Training on the circuit both ways round fixed that.** The four runs that trained properly
-  (see below) all complete laps on the mirrored circuit and the kidney in both directions, none
-  of which they trained on. They beat the hand-written driver in 9 of those 12 cases, and only
-  one (seed 2 on the mirrored circuit) spent any time scraping the barrier.
+- **Training on the circuit both ways round fixed that.** Five layouts are held out and never
+  trained on: the mirrored circuit, and two new circuits (kidney and technical) each driven both
+  ways. Counting a win as "completed at least as many laps and set a faster best lap", the four
+  runs that trained properly (see below) beat the hand-written driver in **9 of 12** cases on the
+  three layouts whose corners resemble the training circuit (mirrored, kidney both ways), **0 of 8**
+  on the technical track, and **9 of 20** overall. Per-run tables are in
+  [docs/evaluation.md](docs/evaluation.md).
 - **It still can't handle a corner much tighter than anything it practised on.** The technical
   track has a hairpin with a 22px radius; the tightest in training is 38px. Every run struggles
   there. The pro driver brakes to a stop facing the barrier and never moves again, because it
