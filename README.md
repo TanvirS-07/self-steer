@@ -63,8 +63,8 @@ for brake. The rays use sphere tracing, so each one only needs about ten distanc
 control themselves. A car is out if it hits a barrier, goes backwards or stalls. Its fitness is how
 far round the track it got, plus a bonus for fast laps once it can complete one. The top two brains
 carry over unchanged, and the rest are bred from tournament-selected parents using uniform crossover
-and Gaussian mutation. The first lap usually appears around generation 18, and by about generation
-70 it laps as fast as a hand-written driver.
+and Gaussian mutation. The circuit is used both ways round during training, so the AI can't get
+away with only being good at turning one way. See [Results](#results) for how well that works.
 
 ## Training your own driver
 
@@ -77,8 +77,73 @@ Training is much faster without the browser:
 npm run train -- 120 models/pro.json
 ```
 
-The included `models/pro.json` was made this way: 120 generations in about three minutes, and it
-laps in around 18.3 seconds.
+The third argument is a random seed, so a run can be repeated exactly. The included
+`models/pro.json` is seed 3 from the runs below.
+
+## Results
+
+All of these numbers come from scripts in `tools/` and can be regenerated.
+
+### Against a hand-written driver
+
+The baseline (`tools/handDriver.mjs`) is a driver I wrote by hand. It gets to cheat: it knows the
+shape of the whole track, works out the safe speed for every corner from its radius and brakes in
+time for it. The AI only has its nine sensors, its speed and how much it's sliding.
+
+Best lap over a two-minute race (`node tools/evaluate.mjs`; full table in
+[docs/evaluation.md](docs/evaluation.md)):
+
+| Track | Hand-written, no aids | AI, no aids |
+| --- | --- | --- |
+| main (trained on) | 19.30s | **18.10s** |
+| main, reversed (trained on) | 19.00s | **18.18s** |
+| mirrored (never seen) | 19.00s | **18.38s** |
+| kidney (never seen) | 11.93s | **11.47s** |
+| kidney, reversed (never seen) | 11.72s | **11.07s** |
+| technical (never seen) | 17.33s | gets stuck at 89% of the lap |
+| technical, reversed (never seen) | 16.28s | one 13.60s lap, then gets stuck |
+
+### Is it learning to drive, or memorising the track?
+
+The AI never sees its position, only distances to the barrier, so it can't memorise coordinates.
+It can still overfit to the kind of corners it practised on, and it did:
+
+- **The first version only trained on the circuit one way round.** About 70% of that circuit's
+  corners turn the same way. It beat the hand-written driver on the mirrored circuit and on the
+  kidney, but driving the training circuit the other way round it couldn't get past a tight
+  hairpin in its weaker direction. It had learned to turn one way better than the other.
+- **Training on the circuit both ways round fixed that.** The four runs that trained properly
+  (see below) all complete laps on the mirrored circuit and the kidney in both directions, none
+  of which they trained on. They beat the hand-written driver in 9 of those 12 cases, and only
+  one (seed 2 on the mirrored circuit) spent any time scraping the barrier.
+- **It still can't handle a corner much tighter than anything it practised on.** The technical
+  track has a hairpin with a 22px radius; the tightest in training is 38px. Every run struggles
+  there. The pro driver brakes to a stop facing the barrier and never moves again, because it
+  never learned to reverse out (cars that go backwards are eliminated in training). Training on
+  more varied circuits, including tighter hairpins, is the obvious next step.
+
+### Is evolution repeatable?
+
+Five training runs, 120 generations each, identical apart from the random seed
+(`node tools/train.mjs 120 <file> <seed>`, charted with `node tools/curves.mjs`):
+
+![Best lap time by generation for five seeds](docs/training-curves.svg)
+
+| Seed | First lap at generation | Best lap by gen 30 | by gen 70 | by gen 120 |
+| --- | --- | --- | --- | --- |
+| 1 | 23 | 31.72s | 23.02s | 18.15s |
+| 2 | 21 | 25.37s | 20.42s | 18.22s |
+| 3 | 8 | 38.22s | 18.47s | 18.07s |
+| 4 | 13 | 24.20s | 18.50s | 18.47s |
+| 5 | 101 | - | - | 34.80s |
+
+Four of the five runs end up between 18.07s and 18.47s, all faster than the hand-written driver,
+though they get there at quite different speeds. Seed 5 got stuck: nothing in its population
+found a lap until generation 101. With only 50 cars, a population can converge on a dead end, so
+a few runs are worth doing rather than trusting one. The run data is in `docs/runs/`.
+
+The pro driver is the run with the highest score on the training tracks (seed 3). It was picked
+by that rule rather than by its results on the test tracks, which would have been cheating.
 
 ## Tests
 
@@ -107,7 +172,12 @@ the pre-trained driver can still get round a lap cleanly. They run on every push
   `src/hud.js`, `src/panels.js` - everything you see: scenery, cars, effects, start lights, HUD,
   the fitness chart and the live network view
 - `tools/train.mjs` - trains a driver in Node without the browser
+- `tools/tracks.mjs` - the training circuits and the test circuits the AI never trains on
+- `tools/handDriver.mjs` - the hand-written baseline driver
+- `tools/evaluate.mjs` - races the AI and the baseline on every track
+- `tools/curves.mjs` - charts several training runs
 - `models/pro.json` - the pre-trained driver
+- `docs/` - evaluation results, training runs and the chart
 - `tests/` - unit tests
 
 The simulation code never touches the canvas, which is what lets the same physics and AI run in
@@ -116,5 +186,6 @@ the browser, in the tests and in the training script.
 ## Things it doesn't do (yet)
 
 - The physics is an arcade model, not a full simulation: no tyre slip curves or yaw inertia.
-- The AI is trained on one circuit, so it may not cope as well with a different layout.
+- The AI handles new circuits with similar corners well, but not corners much tighter than any it
+  trained on, and it can't reverse out of trouble.
 - Cars don't collide with each other.
