@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const [output, ...files] = process.argv.slice(2);
 const BASELINE = Number(process.env.BASELINE ?? 19.3); // hand-written driver, no aids
-const COLOURS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1'];
+const COLOURS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#6d4c41', '#d81b60', '#7cb342', '#3949ab', '#f4511e'];
 
 const runs = files.map((file) => {
   const data = JSON.parse(readFileSync(file));
@@ -54,7 +54,7 @@ runs.forEach((run, i) => {
     .filter(Boolean);
   const colour = COLOURS[i % COLOURS.length];
   parts.push(`<polyline points="${points.join(' ')}" fill="none" stroke="${colour}" stroke-width="2"/>`);
-  parts.push(`<text x="${plot.x + i * 70}" y="40" fill="${colour}">seed ${run.seed}</text>`);
+  parts.push(`<text x="${plot.x + i * 62}" y="40" fill="${colour}">seed ${run.seed}</text>`);
 });
 
 parts.push('</svg>');
