@@ -4,7 +4,7 @@ export const WORLD_WIDTH = 1600;
 export const WORLD_HEIGHT = 900;
 
 // Hand-placed points around the circuit (clockwise). The spline smooths them out.
-const CONTROL_POINTS = [
+export const MAIN_TRACK = [
   [320, 770], [620, 780], [900, 760], [1120, 780], [1330, 740],
   [1460, 620], [1450, 470], [1330, 400], [1180, 430], [1060, 500],
   [930, 470], [880, 360], [960, 250], [1140, 210], [1330, 205],
@@ -19,7 +19,7 @@ const RUNOFF = 34; // grass between the edge of the road and the barrier
 const SEARCH_WINDOW = 25; // how many points either side of the last known one to check
 
 export class Track {
-  constructor(points = CONTROL_POINTS, width = 60) {
+  constructor(points = MAIN_TRACK, width = 60) {
     this.width = width;
     this.barrier = width / 2 + RUNOFF;
     this.controlPoints = points.map(([x, y]) => ({ x, y }));
