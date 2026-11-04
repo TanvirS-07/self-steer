@@ -14,9 +14,14 @@ const COLOURS = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c00', '#8e24aa
 
 // Runs a whole population of AI cars at once. When every car has crashed, got
 // stuck or run out of time, the best ones are bred into the next generation.
+//
+// It can train on several tracks at once: every driver gets a car on each one
+// and its fitness is the total. Training on a single circuit taught the AI to
+// favour one turning direction, so tools/train.mjs uses the circuit both ways round.
 export class Trainer {
-  constructor(track) {
-    this.track = track;
+  constructor(tracks) {
+    this.tracks = Array.isArray(tracks) ? tracks : [tracks];
+    this.track = this.tracks[0]; // the one shown in the game
     this.generation = 1;
     this.history = []; // best fitness of each generation, for the chart
     this.best = null;  // the best driver found in any generation so far
@@ -24,37 +29,44 @@ export class Trainer {
   }
 
   start(drivers) {
-    const s = this.track.start;
     this.time = 0;
-    this.racers = drivers.map((driver, i) => {
-      const car = new Car(
-        s.x - s.dirX * 30,
-        s.y - s.dirY * 30,
-        Math.atan2(s.dirY, s.dirX),
-        COLOURS[i % COLOURS.length],
-      );
-      // no driver aids, so the AI has to learn not to lock the brakes or spin the wheels
-      car.abs = false;
-      car.tractionControl = false;
-      return {
-        car,
-        driver,
-        timer: new LapTimer(this.track),
-        alive: true,
-        fitness: 0,
-        checkProgress: 0,
-        checkTime: 0,
-      };
-    });
+    this.drivers = drivers;
+    this.racers = drivers.flatMap((driver, i) => this.tracks.map((track) => this.racer(driver, i, track)));
+  }
+
+  // One driver's car on one track, lined up on the grid
+  racer(driver, i, track) {
+    const s = track.start;
+    const car = new Car(
+      s.x - s.dirX * 30,
+      s.y - s.dirY * 30,
+      Math.atan2(s.dirY, s.dirX),
+      COLOURS[i % COLOURS.length],
+    );
+    // no driver aids, so the AI has to learn not to lock the brakes or spin the wheels
+    car.abs = false;
+    car.tractionControl = false;
+    return {
+      car,
+      driver,
+      track,
+      timer: new LapTimer(track),
+      alive: true,
+      fitness: 0,
+      checkProgress: 0,
+      checkTime: 0,
+    };
   }
 
   get alive() {
     return this.racers.filter((r) => r.alive).length;
   }
 
-  // The racer that's furthest along right now
+  // The racer that's furthest along right now on the track shown in the game
   get leader() {
-    return this.racers.reduce((best, r) => (r.timer.progress > best.timer.progress ? r : best));
+    return this.racers
+      .filter((r) => r.track === this.track)
+      .reduce((best, r) => (r.timer.progress > best.timer.progress ? r : best));
   }
 
   update(dt) {
@@ -62,7 +74,7 @@ export class Trainer {
 
     for (const r of this.racers) {
       if (!r.alive) continue;
-      r.car.update(r.driver.drive(r.car, this.track), this.track, dt);
+      r.car.update(r.driver.drive(r.car, r.track), r.track, dt);
       r.timer.update(r.car, dt);
       r.fitness = this.score(r);
 
@@ -88,12 +100,22 @@ export class Trainer {
   }
 
   nextGeneration() {
-    const ranked = [...this.racers].sort((a, b) => b.fitness - a.fitness);
+    // add up each driver's score across all its tracks
+    const ranked = this.drivers
+      .map((driver) => {
+        const runs = this.racers.filter((r) => r.driver === driver);
+        return {
+          driver,
+          fitness: runs.reduce((sum, r) => sum + r.fitness, 0),
+          bestLap: runs[0].timer.bestLap, // lap time on the track shown in the game
+        };
+      })
+      .sort((a, b) => b.fitness - a.fitness);
     this.history.push({
       generation: this.generation,
       best: ranked[0].fitness,
       average: ranked.reduce((sum, r) => sum + r.fitness, 0) / ranked.length,
-      bestLap: ranked[0].timer.bestLap,
+      bestLap: ranked[0].bestLap,
     });
 
     // keep hold of the best brain ever seen, not just this generation's
@@ -101,7 +123,7 @@ export class Trainer {
       this.best = {
         brain: ranked[0].driver.brain.copy(),
         fitness: ranked[0].fitness,
-        bestLap: ranked[0].timer.bestLap,
+        bestLap: ranked[0].bestLap,
         generation: this.generation,
       };
     }
