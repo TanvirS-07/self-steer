@@ -21,8 +21,8 @@ const runs = files.map((file) => {
 });
 
 const width = 760;
-const height = 380;
-const plot = { x: 60, y: 30, w: width - 90, h: height - 80 };
+const height = 400;
+const plot = { x: 60, y: 54, w: width - 90, h: height - 104 };
 const generations = Math.max(...runs.map((r) => r.bestSoFar.length));
 const slowest = 40;
 const fastest = 15;
@@ -46,7 +46,7 @@ parts.push(`<text x="${plot.x + plot.w / 2}" y="${height - 8}" text-anchor="midd
 
 // the hand-written driver as a dashed line to beat
 parts.push(`<line x1="${plot.x}" x2="${plot.x + plot.w}" y1="${toY(BASELINE)}" y2="${toY(BASELINE)}" stroke="#222" stroke-dasharray="6 4"/>`);
-parts.push(`<text x="${plot.x + plot.w}" y="${toY(BASELINE) - 6}" text-anchor="end" fill="#222">hand-written driver (${BASELINE}s)</text>`);
+parts.push(`<text x="${plot.x + 8}" y="${toY(BASELINE) + 16}" fill="#222">hand-written driver (${BASELINE}s)</text>`);
 
 runs.forEach((run, i) => {
   const points = run.bestSoFar
@@ -54,7 +54,7 @@ runs.forEach((run, i) => {
     .filter(Boolean);
   const colour = COLOURS[i % COLOURS.length];
   parts.push(`<polyline points="${points.join(' ')}" fill="none" stroke="${colour}" stroke-width="2"/>`);
-  parts.push(`<text x="${plot.x + 10 + i * 70}" y="${plot.y + 16}" fill="${colour}">seed ${run.seed}</text>`);
+  parts.push(`<text x="${plot.x + i * 70}" y="40" fill="${colour}">seed ${run.seed}</text>`);
 });
 
 parts.push('</svg>');
