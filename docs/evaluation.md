@@ -63,3 +63,56 @@ Totals: 9/12 on the three unseen tracks with corners like the training circuit (
 | kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.32s × 10 | 11.32s × 10 |
 | technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | no lap (11s on barrier) | 18.93s × 6, 20.8s on barrier |
 | technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 17.92s × 3, 8.9s on barrier | 14.50s × 8 |
+
+# Trained on varied circuits
+
+Four runs trained with `node tools/train.mjs 120 <file> <seed> varied` (main, chevrons and switchback circuits, both ways round). None of these is shipped.
+
+## Varied seed 1
+
+| Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
+| --- | --- | --- | --- | --- |
+| main (trained on) | 18.97s × 6 | 19.30s × 6 | 18.57s × 6 | 18.60s × 6 |
+| main, reversed (trained on) | 18.82s × 6 | 19.00s × 6 | 18.67s × 6 | 18.68s × 6 |
+| mirrored (never seen) | 18.82s × 6 | 19.00s × 6 | 18.32s × 6 | 18.30s × 6 |
+| kidney (never seen) | 11.68s × 10 | 11.93s × 9 | 11.95s × 9 | 11.95s × 9 |
+| kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.73s × 10 | 11.73s × 10 |
+| technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | no lap (5s on barrier) | no lap (11s on barrier) |
+| technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 13.88s × 1, 5.9s on barrier | 13.93s × 1, 30.5s on barrier |
+
+## Varied seed 2
+
+| Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
+| --- | --- | --- | --- | --- |
+| main (trained on) | 18.97s × 6 | 19.30s × 6 | 18.77s × 6 | 18.75s × 6 |
+| main, reversed (trained on) | 18.82s × 6 | 19.00s × 6 | 19.42s × 6 | 19.25s × 6 |
+| mirrored (never seen) | 18.82s × 6 | 19.00s × 6 | 18.87s × 6 | 18.87s × 6 |
+| kidney (never seen) | 11.68s × 10 | 11.93s × 9 | 12.32s × 9 | 12.32s × 9 |
+| kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.90s × 9 | 11.87s × 10 |
+| technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | 13.57s × 8 | 13.52s × 8 |
+| technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 13.72s × 8 | 13.75s × 8 |
+
+## Varied seed 3
+
+| Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
+| --- | --- | --- | --- | --- |
+| main (trained on) | 18.97s × 6 | 19.30s × 6 | 18.57s × 6 | 18.55s × 6 |
+| main, reversed (trained on) | 18.82s × 6 | 19.00s × 6 | 18.65s × 6 | 18.63s × 6 |
+| mirrored (never seen) | 18.82s × 6 | 19.00s × 6 | 18.65s × 6 | 18.65s × 6 |
+| kidney (never seen) | 11.68s × 10 | 11.93s × 9 | 12.05s × 9 | 12.08s × 9 |
+| kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.75s × 10 | 11.75s × 10 |
+| technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | 13.28s × 8 | 13.22s × 8 |
+| technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 14.20s × 7 | 14.28s × 7 |
+
+## Varied seed 4
+
+| Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
+| --- | --- | --- | --- | --- |
+| main (trained on) | 18.97s × 6 | 19.30s × 6 | 19.50s × 6 | 19.35s × 6 |
+| main, reversed (trained on) | 18.82s × 6 | 19.00s × 6 | 18.48s × 6 | 18.40s × 6 |
+| mirrored (never seen) | 18.82s × 6 | 19.00s × 6 | 19.07s × 6 | 19.15s × 6 |
+| kidney (never seen) | 11.68s × 10 | 11.93s × 9 | 12.67s × 9 | 12.72s × 9 |
+| kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.53s × 10 | 11.55s × 10 |
+| technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | 13.77s × 8 | 13.83s × 8 |
+| technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 14.32s × 8 | 14.07s × 8 |
+

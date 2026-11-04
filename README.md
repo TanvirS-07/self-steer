@@ -119,18 +119,52 @@ It can still overfit to the kind of corners it practised on, and it did:
   three layouts whose corners resemble the training circuit (mirrored, kidney both ways), **0 of 8**
   on the technical track, and **9 of 20** overall. Per-run tables are in
   [docs/evaluation.md](docs/evaluation.md).
-- **It still can't handle a corner much tighter than anything it practised on.** The technical
-  track has a hairpin with a 22px radius; the tightest in training is 38px. Every run struggles
-  there. The pro driver brakes to a stop facing the barrier and never moves again, because it
-  never learned to reverse out (cars that go backwards are eliminated in training). Training on
-  more varied circuits, including tighter hairpins, is the obvious next step.
+- **It couldn't handle a corner much tighter than anything it practised on.** The technical
+  track has corners with a 22px radius; the tightest on the main circuit is 38px. The pro driver
+  brakes to a stop facing the barrier and never moves again, because it never learned to reverse
+  out (cars that go backwards are eliminated in training).
+
+### Training on more varied circuits
+
+To test that last point, I added two practice circuits (chevrons and switchback in
+`tools/tracks.mjs`) with corners as tight as the technical track's, laid out nothing like it, and
+trained four new runs on all three circuits both ways round (`node tools/train.mjs 120 <file>
+<seed> varied`). The technical track stayed unseen. Wins against the hand-written driver, using
+the same definition as above, four runs each:
+
+| Unseen track | Trained on main circuit only | Trained on varied circuits |
+| --- | --- | --- |
+| mirrored | 3/4 | 3/4 |
+| kidney | 2/4 | 0/4 |
+| kidney, reversed | 4/4 | 1/4 |
+| technical | 0/4 | **3/4** |
+| technical, reversed | 0/4 | **3/4** |
+| **total** | 9/20 | 10/20 |
+
+- **The technical track went from 0 of 8 to 6 of 8.** Three of the four varied runs now do 7 or
+  8 clean laps of it in two minutes, with best laps of 13.3 to 14.3 seconds against the
+  hand-written driver's 16.3 to 17.3. One run (seed 1) still gets stuck there.
+- **It cost some speed on the flowing kidney track.** The varied drivers still lap it cleanly,
+  but their best laps are on average about 0.2 seconds slower there than the main-circuit
+  drivers, and about 0.5 seconds slower on it reversed. That's enough to lose to the hand-written
+  driver, which is only just behind on that track. Learning tight corners seems to have made them
+  less committed in fast ones.
+- **Training score doesn't predict generalisation.** By the same rule as before (highest score on
+  the training tracks), seed 1 would be chosen, and it's the one varied run that still fails the
+  technical track. Picking a different run because of its test results would be cheating, so the
+  shipped driver is unchanged. The right fix is a separate validation track to choose models
+  with, kept apart from the test tracks.
+
+Full tables for these runs are in [docs/evaluation.md](docs/evaluation.md) and the run data in
+`docs/runs-varied/`.
 
 ### Is evolution repeatable?
 
-Five training runs, 120 generations each, identical apart from the random seed
-(`node tools/train.mjs 120 <file> <seed>`, charted with `node tools/curves.mjs`):
+Eleven training runs, 120 generations each on the main circuit both ways round, identical apart
+from the random seed (`node tools/train.mjs 120 <file> <seed>`, charted with
+`node tools/curves.mjs`):
 
-![Best lap time by generation for five seeds](docs/training-curves.svg)
+![Best lap time by generation for eleven seeds](docs/training-curves.svg)
 
 | Seed | First lap at generation | Best lap by gen 30 | by gen 70 | by gen 120 |
 | --- | --- | --- | --- | --- |
@@ -138,15 +172,28 @@ Five training runs, 120 generations each, identical apart from the random seed
 | 2 | 21 | 25.37s | 20.42s | 18.22s |
 | 3 | 8 | 38.22s | 18.47s | 18.07s |
 | 4 | 13 | 24.20s | 18.50s | 18.47s |
-| 5 | 101 | - | - | 34.80s |
+| 5 | 55 (restarted at 40) | - | 25.55s | 18.65s |
+| 6 | 13 | 25.32s | 20.00s | 18.45s |
+| 7 | 11 | 35.22s | 19.85s | 17.80s |
+| 8 | 16 | 31.70s | 19.93s | 17.78s |
+| 9 | 13 | 32.53s | 20.43s | 18.07s |
+| 10 | 14 | 27.13s | 17.97s | 17.68s |
+| 11 | 18 | 26.72s | 24.52s | 19.62s |
 
-Four of the five runs end up between 18.07s and 18.47s, all faster than the hand-written driver,
-though they get there at quite different speeds. Seed 5 got stuck: nothing in its population
-found a lap until generation 101. With only 50 cars, a population can converge on a dead end, so
-a few runs are worth doing rather than trusting one. The run data is in `docs/runs/`.
+Ten of the eleven runs end up faster than the hand-written driver (19.30s), between 17.68s and
+18.65s. Seed 11 ends just slower, at 19.62s.
 
-The pro driver is the run with the highest score on the training tracks (seed 3). It was picked
-by that rule rather than by its results on the test tracks, which would have been cheating.
+**Stuck runs.** In the first batch, seed 5 found no lap at all until generation 101 and ended at
+34.80s: with only 50 cars, the whole population can settle on a dead end. The trainer now starts
+again with fresh random brains if no car has completed a lap in 40 generations. That brought
+seed 5's first lap forward from generation 101 to 55 and its final lap time from 34.80s to
+18.65s. The rule only kicks in for a run that has gone 40 generations without a lap, so the other
+seeds are unaffected: re-running seed 1 with it gave exactly the same result. Seed 5's original
+run is kept as `docs/runs/seed5-before-restart-rule.json`.
+
+The pro driver is the run with the highest score on the training tracks among the first four
+seeds (seed 3). It was picked by that rule rather than by its results on the test tracks, which
+would have been cheating.
 
 ## Tests
 
@@ -180,7 +227,7 @@ the pre-trained driver can still get round a lap cleanly. They run on every push
 - `tools/evaluate.mjs` - races the AI and the baseline on every track
 - `tools/curves.mjs` - charts several training runs
 - `models/pro.json` - the pre-trained driver
-- `docs/` - evaluation results, training runs and the chart
+- `docs/` - evaluation results, training runs (`runs/`, `runs-varied/`) and the chart
 - `tests/` - unit tests
 
 The simulation code never touches the canvas, which is what lets the same physics and AI run in
@@ -189,6 +236,8 @@ the browser, in the tests and in the training script.
 ## Things it doesn't do (yet)
 
 - The physics is an arcade model, not a full simulation: no tyre slip curves or yaw inertia.
-- The AI handles new circuits with similar corners well, but not corners much tighter than any it
-  trained on, and it can't reverse out of trouble.
+- The AI handles new circuits with corners like the ones it trained on. Training on sharper
+  circuits fixes tight corners but costs a little speed on fast ones, and it still can't reverse
+  out of trouble.
+- Models are chosen by training score; a separate validation track would be better.
 - Cars don't collide with each other.
