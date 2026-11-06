@@ -1,7 +1,11 @@
 {
   "name": "self-steer",
   "private": true,
+  "description": "A top-down racing game where cars learn to drive themselves with a neural network and a genetic algorithm.",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test",
     "train": "node tools/train.mjs"
