@@ -202,8 +202,9 @@ npm test
 ```
 
 The tests use Node's built-in test runner. They cover the maths helpers, the neural network, the
-genetic operators, lap counting, the car physics (including ABS and the barriers), and check that
-the pre-trained driver can still get round a lap cleanly. They run on every push with GitHub Actions.
+genetic operators, lap counting, the barrier sensors, the car physics (including ABS and the
+barriers), and check that the pre-trained driver can still get round a lap cleanly. They run on
+every push with GitHub Actions.
 
 ## Project layout
 
