@@ -1,11 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clamp, catmullRom, seededRandom } from '../src/math.js';
+import { lerp, clamp, distance, catmullRom, seededRandom } from '../src/math.js';
+
+test('lerp goes from a to b as t goes from 0 to 1', () => {
+  assert.equal(lerp(2, 10, 0), 2);
+  assert.equal(lerp(2, 10, 0.5), 6);
+  assert.equal(lerp(2, 10, 1), 10);
+});
 
 test('clamp keeps values inside the range', () => {
   assert.equal(clamp(5, 0, 10), 5);
   assert.equal(clamp(-3, 0, 10), 0);
   assert.equal(clamp(42, 0, 10), 10);
+});
+
+test('distance is the straight line between two points', () => {
+  assert.equal(distance(0, 0, 3, 4), 5);
+  assert.equal(distance(1, 1, 1, 1), 0);
 });
 
 test('catmullRom passes through the two middle points', () => {
