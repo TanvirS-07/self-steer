@@ -18,3 +18,18 @@ test('every point has a unit direction and a normal at right angles to it', () =
     assert.ok(Math.abs(p.dirX * p.normalX + p.dirY * p.normalY) < 1e-9);
   }
 });
+
+test('a hint near the car finds the same point as searching the whole loop', () => {
+  for (const i of [0, 57, 200, track.path.length - 3]) {
+    const p = track.path[i];
+    const x = p.x + p.normalX * 10;
+    const y = p.y + p.normalY * 10;
+    assert.deepEqual(track.nearest(x, y, i + 5), track.nearest(x, y));
+  }
+});
+
+test('a hint from the wrong side of the track still finds the nearest point', () => {
+  const p = track.path[100];
+  const far = (100 + Math.floor(track.path.length / 2)) % track.path.length;
+  assert.equal(track.nearest(p.x, p.y, far).index, 100);
+});
