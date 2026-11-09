@@ -33,3 +33,13 @@ test('a hint from the wrong side of the track still finds the nearest point', ()
   const far = (100 + Math.floor(track.path.length / 2)) % track.path.length;
   assert.equal(track.nearest(p.x, p.y, far).index, 100);
 });
+
+test('the centre line is on track and past the barrier is not', () => {
+  const p = track.path[40];
+  assert.ok(track.isOnTrack(p.x, p.y));
+  assert.ok(!track.isOnTrack(p.x + p.normalX * (track.barrier + 5), p.y + p.normalY * (track.barrier + 5)));
+});
+
+test('a wider track has its barrier further out', () => {
+  assert.ok(new Track(undefined, 100).barrier > track.barrier);
+});
