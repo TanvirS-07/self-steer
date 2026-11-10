@@ -19,3 +19,19 @@ test('reversing back and forth over the line never counts as a lap', () => {
   }
   assert.equal(timer.lap, 1);
 });
+
+test('a fresh timer starts on lap 1 just behind the line', () => {
+  const car = carOnGrid();
+  const timer = new LapTimer(track);
+  run(car, { throttle: 0, brake: 0, steer: 0 }, 0.1, () => timer.update(car, 1 / 60));
+  assert.equal(timer.lap, 1);
+  assert.equal(timer.lastLap, null);
+  assert.ok(timer.lapFraction <= 0.01);
+});
+
+test('lap time keeps counting while the car sits still', () => {
+  const car = carOnGrid();
+  const timer = new LapTimer(track);
+  run(car, { throttle: 0, brake: 0, steer: 0 }, 2, () => timer.update(car, 1 / 60));
+  assert.ok(Math.abs(timer.lapTime - 2) < 0.05);
+});
