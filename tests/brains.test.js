@@ -23,3 +23,21 @@ test('a saved driver loads back with the same brain and lap time', () => {
   assert.equal(loaded.bestLap, 17.25);
   assert.deepEqual(loaded.brain.predict([0.1, 0.5, -0.3]), brain.predict([0.1, 0.5, -0.3]));
 });
+
+test('nothing saved yet loads as null', () => {
+  assert.equal(loadSavedBrain(), null);
+});
+
+test('broken saved data loads as null instead of throwing', () => {
+  localStorage.setItem('self-steer-best-driver', '{not json');
+  assert.equal(loadSavedBrain(), null);
+});
+
+test('blocked storage does not stop the game', () => {
+  globalThis.localStorage = {
+    getItem() { throw new Error('blocked'); },
+    setItem() { throw new Error('blocked'); },
+  };
+  assert.doesNotThrow(() => saveBrain({ brain: new NeuralNetwork([3, 4, 2]), bestLap: 20 }));
+  assert.equal(loadSavedBrain(), null);
+});
