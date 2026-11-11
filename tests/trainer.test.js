@@ -37,3 +37,22 @@ test('a new generation records the scores and keeps the same population size', (
   assert.equal(trainer.history[0].best, size - 1);
   assert.equal(trainer.history[0].average, (size - 1) / 2);
 });
+
+test('the fittest driver carries over to the next generation unchanged', () => {
+  const trainer = new Trainer(track);
+  scoreDrivers(trainer, (i) => (i === 7 ? 1000 : i));
+  const champion = trainer.drivers[7].brain;
+  trainer.nextGeneration();
+  const inputs = new Array(11).fill(0.5);
+  assert.deepEqual(trainer.drivers[0].brain.predict(inputs), champion.predict(inputs));
+});
+
+test('the best driver ever is kept even if a later generation is worse', () => {
+  const trainer = new Trainer(track);
+  scoreDrivers(trainer, () => 500);
+  trainer.nextGeneration();
+  scoreDrivers(trainer, () => 100);
+  trainer.nextGeneration();
+  assert.equal(trainer.best.fitness, 500);
+  assert.equal(trainer.best.generation, 1);
+});
