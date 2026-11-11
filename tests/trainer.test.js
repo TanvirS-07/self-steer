@@ -21,3 +21,19 @@ test('training cars have no ABS or traction control', () => {
     assert.equal(r.car.tractionControl, false);
   }
 });
+
+// Give each driver a made-up score instead of racing them
+function scoreDrivers(trainer, scoreFor) {
+  trainer.racers.forEach((r) => (r.fitness = scoreFor(trainer.drivers.indexOf(r.driver))));
+}
+
+test('a new generation records the scores and keeps the same population size', () => {
+  const trainer = new Trainer(track);
+  const size = trainer.drivers.length;
+  scoreDrivers(trainer, (i) => i);
+  trainer.nextGeneration();
+  assert.equal(trainer.generation, 2);
+  assert.equal(trainer.drivers.length, size);
+  assert.equal(trainer.history[0].best, size - 1);
+  assert.equal(trainer.history[0].average, (size - 1) / 2);
+});
