@@ -8,6 +8,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "train": "node tools/train.mjs"
+    "train": "node tools/train.mjs",
+    "evaluate": "node tools/evaluate.mjs",
+    "curves": "node tools/curves.mjs"
   }
 }
