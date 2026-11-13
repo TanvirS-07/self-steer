@@ -1,5 +1,7 @@
 # Self Steer
 
+[![Tests](https://github.com/TanvirS-07/self-steer/actions/workflows/test.yml/badge.svg)](https://github.com/TanvirS-07/self-steer/actions/workflows/test.yml)
+
 A top-down racing game where cars teach themselves to drive.
 
 ![The pre-trained AI driving, with its sensors and live network view](docs/screenshot.jpg)
