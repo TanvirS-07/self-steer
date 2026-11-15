@@ -26,6 +26,7 @@ const sensors = new Sensors();
 let showSensors = false;
 let aiDriver = null; // when set, a neural network drives instead of the keyboard
 let driverName = 'YOU';
+let untrained = false; // whether the AI driving is the random one from the N key
 
 // The pre-trained driver loads in the background; until then I falls back to the others
 let proDriver = null;
@@ -145,15 +146,20 @@ window.addEventListener('keydown', (e) => {
     else chaseScenery = null; // it's big, so let it go when not needed
   }
   if (e.code === 'KeyH' && !e.repeat) toggleControls();
-  // I hands the car to the best trained driver, N to a random untrained one
+  // I hands the car to the best trained driver, N to a random untrained one.
+  // Pressing the same key again hands it back to you; pressing the other
+  // one swaps straight from one AI to the other.
   if (e.code === 'KeyI' && !e.repeat) {
     const best = bestDriver();
-    aiDriver = aiDriver ? null : new AIDriver(best ? best.brain.copy() : null);
+    const trainedDriving = aiDriver && !untrained;
+    aiDriver = trainedDriving ? null : new AIDriver(best ? best.brain.copy() : null);
+    untrained = false;
     driverName = aiDriver ? (best ? best.name : 'RANDOM') : 'YOU';
   }
   if (e.code === 'KeyN' && !e.repeat) {
-    aiDriver = new AIDriver();
-    driverName = 'RANDOM';
+    untrained = !(aiDriver && untrained);
+    aiDriver = untrained ? new AIDriver() : null;
+    driverName = untrained ? 'RANDOM' : 'YOU';
   }
 });
 
