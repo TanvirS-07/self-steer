@@ -80,7 +80,8 @@ npm run train -- 120 models/pro.json
 ```
 
 The third argument is a random seed, so a run can be repeated exactly. The included
-`models/pro.json` is seed 3 from the runs below.
+`models/pro.json` is seed 10 from the runs below, chosen on a validation track (see
+[Choosing the driver to ship](#choosing-the-driver-to-ship)).
 
 ## Results
 
@@ -97,13 +98,15 @@ Best lap over a two-minute race (`node tools/evaluate.mjs`; full table in
 
 | Track | Hand-written, no aids | AI, no aids |
 | --- | --- | --- |
-| main (trained on) | 19.30s | **18.10s** |
-| main, reversed (trained on) | 19.00s | **18.18s** |
-| mirrored (never seen) | 19.00s | **18.38s** |
-| kidney (never seen) | 11.93s | **11.47s** |
-| kidney, reversed (never seen) | 11.72s | **11.07s** |
-| technical (never seen) | 17.33s | gets stuck at 89% of the lap |
-| technical, reversed (never seen) | 16.28s | one 13.60s lap, then gets stuck |
+| main (trained on) | 19.30s | **17.67s** |
+| main, reversed (trained on) | 19.00s | **17.55s** |
+| validation (used to choose the driver) | 24.75s | **20.93s** |
+| validation, reversed (used to choose the driver) | 23.03s | **20.53s** |
+| mirrored (never seen) | 19.00s | **17.72s** |
+| kidney (never seen) | 11.93s | **11.63s** |
+| kidney, reversed (never seen) | 11.72s | **11.17s** |
+| technical (never seen) | 17.33s | gets stuck on the first lap |
+| technical, reversed (never seen) | 16.28s | one 13.63s lap, then gets stuck |
 
 ### Is it learning to drive, or memorising the track?
 
@@ -153,9 +156,9 @@ the same definition as above, four runs each:
   less committed in fast ones.
 - **Training score doesn't predict generalisation.** By the same rule as before (highest score on
   the training tracks), seed 1 would be chosen, and it's the one varied run that still fails the
-  technical track. Picking a different run because of its test results would be cheating, so the
-  shipped driver is unchanged. The right fix is a separate validation track to choose models
-  with, kept apart from the test tracks.
+  technical track. Picking a different run because of its test results would be cheating, so
+  the driver is now chosen on a separate validation track instead (see
+  [Choosing the driver to ship](#choosing-the-driver-to-ship)).
 
 Full tables for these runs are in [docs/evaluation.md](docs/evaluation.md) and the run data in
 `docs/runs-varied/`.
@@ -193,9 +196,42 @@ seed 5's first lap forward from generation 101 to 55 and its final lap time from
 seeds are unaffected: re-running seed 1 with it gave exactly the same result. Seed 5's original
 run is kept as `docs/runs/seed5-before-restart-rule.json`.
 
-The pro driver is the run with the highest score on the training tracks among the first four
-seeds (seed 3). It was picked by that rule rather than by its results on the test tracks, which
-would have been cheating.
+### Choosing the driver to ship
+
+The pro driver used to be the run with the highest score on the training tracks among the first
+four seeds (seed 3). Training score turned out to be a poor guide to how a driver copes with new
+circuits, and choosing by test results would be cheating, so there is now a third set of tracks.
+The validation circuit (`tools/tracks.mjs`) is never trained on and is kept apart from the test
+tracks. It has a long straight, fast sweepers, a chicane and one hairpin as tight as the technical
+track's, and it was fixed before any AI driver was run on it.
+
+`node tools/select.mjs` races all fifteen finished runs (eleven main-circuit seeds and four
+varied-circuit seeds) on it for two minutes in each direction with no driver aids. The run that
+completes the most laps wins, with the fastest laps breaking a tie:
+
+| Rank | Driver | validation | validation, reversed | Laps |
+| --- | --- | --- | --- | --- |
+| - | hand-written | 24.75s × 4 | 23.03s × 5 | 9 |
+| 1 | **main seed 10** | 20.93s × 5 | 20.53s × 5 | 10 |
+| 2 | varied seed 1 | 20.57s × 5 | 21.33s × 5 | 10 |
+| 3 | main seed 6 | 21.15s × 5 | 21.10s × 5 | 10 |
+| 10 | main seed 3 (the old pro driver) | 21.90s × 5 | no lap | 5 |
+| 13= | main seeds 1, 5 and 9 | no lap | no lap | 0 |
+
+The full ranking is in [docs/evaluation.md](docs/evaluation.md).
+
+- **Validation caught something training score couldn't.** Six of the eleven main-circuit runs
+  get stuck on the validation track in at least one direction, including the old pro driver. All
+  four varied-circuit runs complete it both ways.
+- **The new pro driver is seed 10.** On the test tracks it beats the hand-written driver on the
+  mirrored circuit and the kidney both ways (3 of 5, the same as seed 3), and it's about 0.5
+  seconds a lap faster than seed 3 on the main circuit.
+- **It still fails the technical track.** Seed 10 clears the validation hairpin but gets stuck
+  on the technical track, which has several tight corners in a row rather than one. One
+  validation circuit isn't enough to predict that; the varied-circuit runs that do handle it
+  rank 6th and 8th here because they're slower everywhere else. That result is reported as it
+  is: the validation circuit isn't going to be reshaped until the answer on the test tracks
+  looks better, because that would be choosing by test results again.
 
 ## Tests
 
@@ -204,7 +240,8 @@ npm test
 ```
 
 The tests use Node's built-in test runner. They cover the maths helpers, the track geometry, the
-neural network, the genetic operators, the trainer, lap counting, the barrier sensors, saving and
+neural network, the genetic operators, the trainer, lap counting, the track sets (that the
+validation and test circuits really are kept apart from training), the barrier sensors, saving and
 loading drivers, the car physics (including ABS and the barriers), and check that the pre-trained
 driver can still get round a lap cleanly. They run on every push with GitHub Actions.
 
@@ -225,9 +262,11 @@ driver can still get round a lap cleanly. They run on every push with GitHub Act
   `src/hud.js`, `src/panels.js` - everything you see: scenery, cars, effects, start lights, HUD,
   the fitness chart and the live network view
 - `tools/train.mjs` - trains a driver in Node without the browser
-- `tools/tracks.mjs` - the training circuits and the test circuits the AI never trains on
+- `tools/tracks.mjs` - the training circuits, and the validation and test circuits the AI never trains on
 - `tools/handDriver.mjs` - the hand-written baseline driver
 - `tools/evaluate.mjs` - races the AI and the baseline on every track
+- `tools/select.mjs` - chooses the driver to ship by racing every run on the validation track
+- `tools/race.mjs` - the two-minute race both of those use
 - `tools/curves.mjs` - charts several training runs
 - `models/pro.json` - the pre-trained driver
 - `docs/` - evaluation results, training runs (`runs/`, `runs-varied/`) and the chart
@@ -242,5 +281,6 @@ the browser, in the tests and in the training script.
 - The AI handles new circuits with corners like the ones it trained on. Training on sharper
   circuits fixes tight corners but costs a little speed on fast ones, and it still can't reverse
   out of trouble.
-- Models are chosen by training score; a separate validation track would be better.
+- The driver is chosen on a single validation circuit, which doesn't predict how it copes with
+  a run of tight corners. More, and more varied, validation circuits would be better.
 - Cars don't collide with each other.

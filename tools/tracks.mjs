@@ -1,6 +1,8 @@
 // Circuits for checking whether the AI has learned to drive or has just
 // memorised the track it practised on. The AI trains on the main circuit in
-// both directions, so everything in TEST_TRACKS is new to it.
+// both directions, so everything in VALIDATION_TRACKS and TEST_TRACKS is new to it.
+// The validation circuit is for choosing which trained driver to ship; the test
+// circuits are only for reporting how well that driver does, never for choosing.
 import { MAIN_TRACK } from '../src/track.js';
 
 const KIDNEY = [
@@ -27,6 +29,15 @@ const SWITCHBACK = [
   [260, 360], [500, 380], [680, 470], [500, 560], [260, 580], [150, 680],
 ];
 
+// A mix of everything: a long straight, fast sweepers, a chicane, and a hairpin
+// as tight as the technical test track's, laid out like none of the others
+const VALIDATION = [
+  [300, 760], [750, 780], [1200, 760], [1420, 680], [1460, 500], [1330, 420], [1180, 500],
+  [1040, 430], [1100, 300], [1300, 250], [1450, 160], [1280, 80], [900, 90], [600, 70],
+  [350, 120], [250, 260], [380, 360], [560, 300], [720, 380], [640, 540], [400, 520],
+  [200, 560], [160, 680],
+];
+
 export const TRAINING_TRACKS = {
   main: MAIN_TRACK,
   'main, reversed': [...MAIN_TRACK].reverse(),
@@ -39,6 +50,13 @@ export const VARIED_TRAINING_TRACKS = {
   'chevrons, reversed': [...CHEVRONS].reverse(),
   switchback: SWITCHBACK,
   'switchback, reversed': [...SWITCHBACK].reverse(),
+};
+
+// Never trained on, and kept apart from the test tracks: tools/select.mjs races
+// every trained driver here to decide which one ships
+export const VALIDATION_TRACKS = {
+  validation: VALIDATION,
+  'validation, reversed': [...VALIDATION].reverse(),
 };
 
 export const TEST_TRACKS = {

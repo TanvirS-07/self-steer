@@ -10,6 +10,7 @@
     "test": "node --test",
     "train": "node tools/train.mjs",
     "evaluate": "node tools/evaluate.mjs",
+    "select": "node tools/select.mjs",
     "curves": "node tools/curves.mjs"
   }
 }
