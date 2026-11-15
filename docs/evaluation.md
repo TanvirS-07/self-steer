@@ -4,6 +4,45 @@ Each AI driver and the hand-written driver race for 120 seconds on every track. 
 
 "Beats the baseline" below means: with no driver aids, the AI completed at least as many laps as the hand-written driver and set a faster best lap.
 
+## Choosing the shipped driver on the validation track
+
+Every finished run races on the validation circuit in both directions with no driver aids. The run with the most laps is shipped, with the fastest laps breaking a tie. Generated with `node tools/select.mjs`. The validation circuit is never trained on, is not one of the test tracks, and was fixed before any AI driver was run on it.
+
+| Rank | Driver | validation | validation, reversed | Laps |
+| --- | --- | --- | --- | --- |
+| - | hand-written | 24.75s × 4 | 23.03s × 5 | 9 |
+| 1 | main seed 10 | 20.93s × 5 | 20.53s × 5 | 10 |
+| 2 | varied seed 1 | 20.57s × 5 | 21.33s × 5 | 10 |
+| 3 | main seed 6 | 21.15s × 5 | 21.10s × 5 | 10 |
+| 4 | main seed 7 | 21.08s × 5 | 21.17s × 5 | 10 |
+| 5 | varied seed 4 | 21.95s × 5, 6.5s on barrier | 20.42s × 5 | 10 |
+| 6 | varied seed 3 | 21.42s × 5 | 21.33s × 5 | 10 |
+| 7 | main seed 4 | 22.27s × 5 | 21.47s × 5, 0.2s on barrier | 10 |
+| 8 | varied seed 2 | 21.77s × 5 | 22.17s × 5 | 10 |
+| 9 | main seed 2 | 22.02s × 5 | 23.15s × 4, 8.9s on barrier | 9 |
+| 10 | main seed 3 | 21.90s × 5 | no lap (0s on barrier) | 5 |
+| 11 | main seed 8 | 20.93s × 5 | no lap (0s on barrier) | 5 |
+| 12 | main seed 11 | 22.03s × 5 | no lap (0s on barrier) | 5 |
+| 13 | main seed 1 | no lap (0s on barrier) | no lap (0s on barrier) | 0 |
+| 14 | main seed 5 | no lap (0s on barrier) | no lap (0s on barrier) | 0 |
+| 15 | main seed 9 | no lap (0s on barrier) | no lap (0s on barrier) | 0 |
+
+## Seed 10 (the shipped pro driver)
+
+| Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
+| --- | --- | --- | --- | --- |
+| main (trained on) | 18.97s × 6 | 19.30s × 6 | 17.67s × 6 | 17.67s × 6 |
+| main, reversed (trained on) | 18.82s × 6 | 19.00s × 6 | 17.55s × 6 | 17.55s × 6 |
+| validation (never trained on, used to choose the driver) | 22.55s × 5 | 24.75s × 4 | 20.93s × 5 | 20.90s × 5 |
+| validation, reversed (never trained on, used to choose the driver) | 22.15s × 5 | 23.03s × 5 | 20.53s × 5 | 20.50s × 5 |
+| mirrored (never seen) | 18.82s × 6 | 19.00s × 6 | 17.72s × 6 | 17.70s × 6 |
+| kidney (never seen) | 11.68s × 10 | 11.93s × 9 | 11.63s × 10 | 11.65s × 10 |
+| kidney, reversed (never seen) | 11.67s × 10 | 11.72s × 10 | 11.17s × 10 | 11.17s × 10 |
+| technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | no lap (17s on barrier) | 16.63s × 1, 7.2s on barrier |
+| technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 13.63s × 1, 4.6s on barrier | 13.68s × 8 |
+
+The per-seed tables below were generated before the validation track was added, so they don't have its rows.
+
 ## Summary across the four runs that trained properly (seeds 1 to 4)
 
 | Unseen track | Seed 1 | Seed 2 | Seed 3 | Seed 4 | Beats baseline |
@@ -40,7 +79,7 @@ Totals: 9/12 on the three unseen tracks with corners like the training circuit (
 | technical (never seen) | 15.97s × 7 | 17.33s × 6, 0.1s on barrier | 19.65s × 6, 15.4s on barrier | no lap (3s on barrier) |
 | technical, reversed (never seen) | 15.70s × 7 | 16.28s × 7 | 23.60s × 4, 45.1s on barrier | 13.80s × 7 |
 
-## Seed 3 (the shipped pro driver)
+## Seed 3 (the pro driver until the validation track was added)
 
 | Track | Hand-written (ABS + TC on) | Hand-written (no aids) | AI (no aids) | AI (ABS + TC on) |
 | --- | --- | --- | --- | --- |
