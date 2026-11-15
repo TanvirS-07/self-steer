@@ -2,6 +2,7 @@ const FIRST_LIGHT = 0.8;   // seconds before the first light comes on
 const LIGHT_GAP = 1;       // seconds between each light
 const LIGHT_COUNT = 5;
 const MESSAGE_TIME = 2;
+const OVERLAY_FADE = 0.7;   // how long the on-screen lights linger once they've gone out
 
 // The five red lights over the grid. They come on one at a time, then all go
 // out together after a random pause, which is the signal to go. The random
@@ -45,6 +46,13 @@ export class StartLights {
       this.reaction = this.time - this.outAt;
       if (!this.jumpedStart) this.show(`REACTION ${this.reaction.toFixed(3)}s`);
     }
+  }
+
+  // How visible the big on-screen lights are: solid through the countdown,
+  // then fading away once the lights have gone out
+  get overlayAlpha() {
+    if (!this.racing) return 1;
+    return Math.max(0, 1 - (this.time - this.outAt) / OVERLAY_FADE);
   }
 
   show(text) {
@@ -97,6 +105,48 @@ export class StartLights {
       ctx.fill();
     }
 
+    ctx.restore();
+  }
+
+  // A big copy of the lights in the middle of the screen, so the countdown is
+  // easy to read wherever the camera is. Drawn in screen space like the HUD.
+  drawOverlay(ctx, pixelRatio) {
+    const alpha = this.overlayAlpha;
+    if (alpha <= 0) return;
+
+    const radius = 15;
+    const gap = 46;
+    const width = gap * (LIGHT_COUNT - 1) + radius * 2 + 36;
+    const height = radius * 2 + 28;
+
+    ctx.save();
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    const left = Math.round((ctx.canvas.width / pixelRatio - width) / 2);
+    const top = 138;
+    ctx.globalAlpha = alpha;
+
+    ctx.fillStyle = 'rgba(16, 20, 24, 0.88)';
+    ctx.beginPath();
+    ctx.roundRect(left, top, width, height, 14);
+    ctx.fill();
+
+    const lit = this.lightsOn;
+    const y = top + height / 2;
+    for (let i = 0; i < LIGHT_COUNT; i++) {
+      const x = left + 18 + radius + i * gap;
+      const on = i < lit;
+      if (on) {
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.2);
+        glow.addColorStop(0, 'rgba(255, 40, 30, 0.55)');
+        glow.addColorStop(1, 'rgba(255, 40, 30, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(x - radius * 2.2, y - radius * 2.2, radius * 4.4, radius * 4.4);
+      }
+      ctx.fillStyle = on ? '#ff3b2f' : '#3a1513';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
