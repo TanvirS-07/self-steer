@@ -174,6 +174,10 @@ function renderChaseScenery() {
 }
 
 function resize() {
+  // A page loaded in a hidden tab or panel can have no size yet. There's
+  // nothing to draw, so wait for the resize that comes when it's shown.
+  if (window.innerWidth === 0 || window.innerHeight === 0) return;
+
   const dpr = window.devicePixelRatio || 1;
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
@@ -205,8 +209,11 @@ function frame(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
 
-  update(dt);
-  draw();
+  // nothing runs until the page has a size and the scenery has been drawn
+  if (scenery) {
+    update(dt);
+    draw();
+  }
   requestAnimationFrame(frame);
 }
 
@@ -337,6 +344,7 @@ function draw() {
   const pixelRatio = window.devicePixelRatio || 1;
   drawHud(ctx, timer, car, pixelRatio, driverName, rival?.timer);
   if (aiDriver) drawPanels(aiDriver.brain);
+  lights.drawOverlay(ctx, pixelRatio);
   lights.drawMessage(ctx, pixelRatio);
 }
 
