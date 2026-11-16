@@ -34,6 +34,12 @@ test('a mutation rate of 1 changes every gene', () => {
   assert.ok(net.layers[0].weights.flat().every((g) => g !== 0.5));
 });
 
+test('mutation nudges the biases as well as the weights', () => {
+  const net = filled(0.5);
+  mutate(net, 1, 1);
+  assert.ok(net.layers[0].biases.every((b) => b !== 0.5));
+});
+
 test('tournament picks the fittest entrant', () => {
   const ranked = [{ fitness: 1 }, { fitness: 1 }, { fitness: 1 }];
   const champion = { fitness: 99 };
