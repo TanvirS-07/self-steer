@@ -24,3 +24,12 @@ test('the pre-trained driver gets round a lap without hitting anything', () => {
   assert.equal(timer.lap, 2, 'should finish a lap within 30 seconds');
   assert.equal(hits, 0);
 });
+
+test('an untrained driver never presses the throttle and brake together', () => {
+  const car = carOnGrid();
+  for (let i = 0; i < 20; i++) {
+    const controls = new AIDriver().drive(car, track);
+    assert.ok(controls.throttle === 0 || controls.brake === 0);
+    assert.ok(controls.steer >= -1 && controls.steer <= 1);
+  }
+});
